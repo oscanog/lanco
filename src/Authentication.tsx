@@ -1,6 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
-import { ArrowLeft, Trophy } from "lucide-react";
+import { ArrowLeft, Trophy, Utensils } from "lucide-react";
 
 export default function Authentication() {
   // @ts-ignore
@@ -12,9 +12,11 @@ export default function Authentication() {
 
   const juniorObj = (user as any)?.juniorCertification;
   const advancedObj = (user as any)?.advancedCertification;
+  const mealObj = (user as any)?.mealAllowance;
 
   const juniorStatus = juniorObj?.status || "unverified";
   const advancedStatus = advancedObj?.status || "unverified";
+  const mealStatus = mealObj?.status || "unverified";
 
   const handleJuniorClick = () => {
     if (juniorStatus !== "verified") {
@@ -33,7 +35,7 @@ export default function Authentication() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] font-sans text-[#424242] p-5">
+    <div className="min-h-screen bg-[#FAFAFA] font-sans text-[#424242] p-5 pb-20">
       <div className="flex items-center mb-10">
         <a href="/profile" className="p-2 -ml-2 rounded-full hover:bg-black/5 transition">
           <ArrowLeft size={24} className="text-[#262626]" />
@@ -88,6 +90,29 @@ export default function Authentication() {
             'bg-[#E0E7FF] text-[#2563EB]'
           }`}>
             {advancedStatus}
+          </div>
+        </div>
+
+        {/* Meal Allowance Reimbursement */}
+        <div 
+          className="relative rounded-3xl border border-[#3B82F6]/30 bg-white p-6 shadow-sm pt-14 cursor-not-allowed opacity-90"
+          title="This section is updated by your administrator."
+        >
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2">
+            <div className="flex bg-[#10B981] size-[60px] items-center justify-center hexagon shadow-sm">
+              <Utensils size={28} className="text-white drop-shadow-md" />
+            </div>
+          </div>
+          
+          <h2 className="text-center text-[17px] font-medium text-[#424242] mb-6">meal allowance reimbursement</h2>
+          
+          <div className={`rounded-xl py-3 text-center text-sm font-medium ${
+            mealStatus === 'verified' ? 'bg-[#10B981] text-white' : 
+            mealStatus === 'pending' ? 'bg-[#FCE38A]/50 text-orange-600' : 
+            mealStatus === 'rejected' ? 'bg-red-100 text-red-600' :
+            'bg-gray-100 text-gray-500'
+          }`}>
+            {mealStatus}
           </div>
         </div>
 

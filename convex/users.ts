@@ -42,6 +42,12 @@ export const getUser = query({
       (advancedData as any).holdingIdUrl = holdUrl;
     }
 
+    let mealData = targetUser.mealAllowance;
+    if (mealData && mealData.storageId) {
+      const mealUrl = await ctx.storage.getUrl(mealData.storageId);
+      (mealData as any).mealAllowanceUrl = mealUrl;
+    }
+
     return targetUser;
   }
 });

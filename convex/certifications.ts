@@ -54,7 +54,7 @@ export const submitAdvanced = mutation({
 });
 
 export const approveCertification = mutation({
-  args: { targetUserId: v.id("users"), type: v.union(v.literal("junior"), v.literal("advanced")) },
+  args: { targetUserId: v.id("users"), type: v.union(v.literal("junior"), v.literal("advanced"), v.literal("mealAllowance")) },
   handler: async (ctx, args) => {
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthenticated");
@@ -78,12 +78,19 @@ export const approveCertification = mutation({
           status: "verified",
         },
       });
+    } else if (args.type === "mealAllowance" && targetUser.mealAllowance) {
+      await ctx.db.patch(args.targetUserId, {
+        mealAllowance: {
+          ...targetUser.mealAllowance,
+          status: "verified",
+        },
+      });
     }
   },
 });
 
 export const rejectCertification = mutation({
-  args: { targetUserId: v.id("users"), type: v.union(v.literal("junior"), v.literal("advanced")) },
+  args: { targetUserId: v.id("users"), type: v.union(v.literal("junior"), v.literal("advanced"), v.literal("mealAllowance")) },
   handler: async (ctx, args) => {
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthenticated");
@@ -101,6 +108,33 @@ export const rejectCertification = mutation({
       await ctx.db.patch(args.targetUserId, {
         advancedCertification: { ...targetUser.advancedCertification, status: "rejected" },
       });
+    } else if (args.type === "mealAllowance" && targetUser.mealAllowance) {
+      await ctx.db.patch(args.targetUserId, {
+        mealAllowance: { ...targetUser.mealAllowance, status: "unverified" },
+      });
     }
+  },
+});
+
+export const submitMealAllowance = mutation({
+  args: {
+    targetUserId: v.id("users"),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    const adminId = await getAuthUserId(ctx);
+    if (!adminId) throw new Error("Unauthenticated");
+    const admin = await ctx.db.get(adminId);
+    if (admin?.role !== "admin") throw new Error("Unauthorized");
+
+    const targetUser = await ctx.db.get(args.targetUserId);
+    if (!targetUser) throw new Error("User not found");
+
+    await ctx.db.patch(args.targetUserId, {
+      mealAllowance: {
+        storageId: args.storageId,
+        status: "pending",
+      },
+    });
   },
 });

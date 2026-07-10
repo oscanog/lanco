@@ -31,6 +31,10 @@ export default defineSchema({
       holdingIdStorageId: v.id("_storage"),
       status: v.union(v.literal("pending"), v.literal("verified"), v.literal("rejected")),
     })),
+    mealAllowance: v.optional(v.object({
+      status: v.union(v.literal("unverified"), v.literal("pending"), v.literal("verified")),
+      storageId: v.optional(v.id("_storage")),
+    })),
   }).index("email", ["email"]).index("phone", ["phone"]),
   numbers: defineTable({
     value: v.number(),

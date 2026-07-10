@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
-import { ArrowLeft, UserPlus, Eye, X, KeySquare, Wand2, CheckCircle, AlertCircle, Copy, Check, Loader2, UserCheck } from "lucide-react";
+import { ArrowLeft, UserPlus, Eye, X, KeySquare, Wand2, CheckCircle, AlertCircle, Copy, Check, Loader2, UserCheck, UploadCloud } from "lucide-react";
 
 // ── Toast System ──
 type Toast = { id: number; message: string; type: "success" | "error" };
@@ -69,10 +69,19 @@ export default function AdminManageUsers() {
   const [successGenerated, setSuccessGenerated] = useState<{ email: string; pw: string } | null>(null);
   const [hasCopiedGenerated, setHasCopiedGenerated] = useState(false);
 
+  // Meal Allowance
+  const mealInputRef = useRef<HTMLInputElement>(null);
+  const [mealUploading, setMealUploading] = useState(false);
+
   // @ts-ignore
   const approveCert = useMutation(api.certifications.approveCertification);
   // @ts-ignore
   const rejectCert = useMutation(api.certifications.rejectCertification);
+  // @ts-ignore
+  const submitMealAllowance = useMutation(api.certifications.submitMealAllowance);
+  // @ts-ignore
+  const generateUploadUrl = useMutation(api.certifications.generateUploadUrl);
+
   // @ts-ignore
   const adminCreateUser = useAction(api.admin.adminCreateUser);
   // @ts-ignore
@@ -92,13 +101,31 @@ export default function AdminManageUsers() {
   const dismissToast = (id: number) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
   // ── Handlers ──
-  const handleApprove = async (userId: Id<"users">, type: "junior" | "advanced") => {
-    try { await approveCert({ targetUserId: userId, type }); addToast(`${type} certification approved!`, "success"); }
+  const handleApprove = async (userId: Id<"users">, type: "junior" | "advanced" | "mealAllowance") => {
+    try { await approveCert({ targetUserId: userId, type }); addToast(`${type} approved!`, "success"); }
     catch (e: any) { addToast(e.message || "Failed to approve.", "error"); }
   };
-  const handleReject = async (userId: Id<"users">, type: "junior" | "advanced") => {
-    try { await rejectCert({ targetUserId: userId, type }); addToast(`${type} certification rejected.`, "success"); }
+  const handleReject = async (userId: Id<"users">, type: "junior" | "advanced" | "mealAllowance") => {
+    try { await rejectCert({ targetUserId: userId, type }); addToast(`${type} rejected.`, "success"); }
     catch (e: any) { addToast(e.message || "Failed to reject.", "error"); }
+  };
+
+  const handleMealUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedUserId) return;
+    setMealUploading(true);
+    try {
+      const postUrl = await generateUploadUrl();
+      const result = await fetch(postUrl, { method: "POST", headers: { "Content-Type": file.type }, body: file });
+      const { storageId } = await result.json();
+      await submitMealAllowance({ targetUserId: selectedUserId, storageId });
+      addToast("Meal allowance uploaded successfully and set to pending.", "success");
+    } catch (err: any) {
+      addToast(err.message || "Failed to upload meal allowance", "error");
+    } finally {
+      setMealUploading(false);
+      if (mealInputRef.current) mealInputRef.current.value = "";
+    }
   };
 
   const handleCreateUser = async () => {
@@ -322,6 +349,7 @@ export default function AdminManageUsers() {
                </button>
             </div>
 
+            {/* Junior Cert */}
             <h3 className="font-bold text-lg mb-3 border-b border-gray-200 dark:border-gray-700 pb-1 text-gray-700 dark:text-gray-300">Junior Certification</h3>
             {selectedUser.juniorCertification ? (
               <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-800/60 p-4 rounded-xl border border-gray-100 dark:border-gray-700 mb-6">
@@ -333,9 +361,10 @@ export default function AdminManageUsers() {
               </div>
             ) : <div className="text-gray-400 dark:text-gray-500 mb-6 italic">No junior certification submitted.</div>}
 
+            {/* Advanced Cert */}
             <h3 className="font-bold text-lg mb-3 border-b border-gray-200 dark:border-gray-700 pb-1 text-gray-700 dark:text-gray-300">Advanced Certification</h3>
             {selectedUser.advancedCertification ? (
-              <div className="bg-gray-50 dark:bg-gray-800/60 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col gap-4">
+              <div className="bg-gray-50 dark:bg-gray-800/60 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col gap-4 mb-6">
                 <div><span className="text-gray-400 dark:text-gray-500 text-xs uppercase font-bold block mb-1">Status</span> <span className="font-semibold text-blue-600 dark:text-blue-400">{selectedUser.advancedCertification.status}</span></div>
                 <div className="grid grid-cols-2 gap-4">
                    <div>
@@ -356,7 +385,47 @@ export default function AdminManageUsers() {
                    </div>
                 </div>
               </div>
-            ) : <div className="text-gray-400 dark:text-gray-500 italic">No advanced certification submitted.</div>}
+            ) : <div className="text-gray-400 dark:text-gray-500 italic mb-6">No advanced certification submitted.</div>}
+
+            {/* Meal Allowance Reimbursement */}
+            <h3 className="font-bold text-lg mb-3 border-b border-gray-200 dark:border-gray-700 pb-1 text-gray-700 dark:text-gray-300 flex justify-between items-center">
+              <span>Meal Allowance Reimbursement</span>
+              {selectedUser.mealAllowance?.status !== 'verified' && (
+                <div>
+                  <input type="file" ref={mealInputRef} className="hidden" accept="image/*" onChange={handleMealUpload} />
+                  <button onClick={() => mealInputRef.current?.click()} disabled={mealUploading} className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm transition">
+                    {mealUploading ? <Loader2 size={16} className="animate-spin" /> : <UploadCloud size={16} />}
+                    {mealUploading ? "Uploading..." : "Upload Image"}
+                  </button>
+                </div>
+              )}
+            </h3>
+            
+            {!selectedUser.mealAllowance || selectedUser.mealAllowance.status === "unverified" ? (
+              <div className="text-gray-400 dark:text-gray-500 italic pb-2">No meal allowance uploaded by administrator yet.</div>
+            ) : (
+              <div className="bg-gray-50 dark:bg-gray-800/60 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col gap-4">
+                 <div className="flex justify-between items-center">
+                   <div>
+                     <span className="text-gray-400 dark:text-gray-500 text-xs uppercase font-bold block mb-1">Status</span>
+                     <span className="font-semibold text-blue-600 dark:text-blue-400 capitalize">{selectedUser.mealAllowance.status}</span>
+                   </div>
+                   {selectedUser.mealAllowance.status === "pending" && (
+                     <div className="flex gap-2">
+                        <button onClick={() => handleApprove(selectedUser._id, "mealAllowance")} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg px-3 py-1.5 text-sm font-semibold transition">Approve</button>
+                        <button onClick={() => handleReject(selectedUser._id, "mealAllowance")} className="bg-red-500 hover:bg-red-600 text-white rounded-lg px-3 py-1.5 text-sm font-semibold transition">Reject</button>
+                     </div>
+                   )}
+                 </div>
+                 {(selectedUser.mealAllowance as any).mealAllowanceUrl && (
+                   <div>
+                     <span className="text-gray-500 dark:text-gray-400 text-sm font-semibold mb-2 block">Uploaded Receipt / Document</span>
+                     <img src={(selectedUser.mealAllowance as any).mealAllowanceUrl} className="w-full max-w-sm rounded-lg border border-gray-200 dark:border-gray-700 object-cover" alt="Meal Allowance" />
+                   </div>
+                 )}
+              </div>
+            )}
+
           </div>
         </div>
       )}
@@ -385,6 +454,7 @@ export default function AdminManageUsers() {
                 <th className="px-6 py-4 font-medium">Actions</th>
                 <th className="px-6 py-4 font-medium">Junior Cert</th>
                 <th className="px-6 py-4 font-medium">Advanced Cert</th>
+                <th className="px-6 py-4 font-medium">Meal Allowance</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -412,7 +482,7 @@ export default function AdminManageUsers() {
                         <button onClick={() => handleReject(u._id, "junior")} className="bg-red-500 hover:bg-red-600 text-white rounded-lg px-2.5 py-1 transition">Reject</button>
                       </div>
                     ) : (
-                      <span className="text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{u.juniorCertification?.status || "None"}</span>
+                      <span className="text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{u.juniorCertification?.status || "unverified"}</span>
                     )}
                   </td>
                   <td className="px-6 py-4 text-xs font-semibold">
@@ -422,7 +492,16 @@ export default function AdminManageUsers() {
                         <button onClick={() => handleReject(u._id, "advanced")} className="bg-red-500 hover:bg-red-600 text-white rounded-lg px-2.5 py-1 transition">Reject</button>
                       </div>
                     ) : (
-                      <span className="text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{u.advancedCertification?.status || "None"}</span>
+                      <span className="text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{u.advancedCertification?.status || "unverified"}</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-xs font-semibold">
+                    {u.mealAllowance?.status === "pending" ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-orange-500 border border-orange-500 bg-orange-50 dark:bg-orange-950/30 px-2 py-1 rounded">Pending Check</span>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{u.mealAllowance?.status || "unverified"}</span>
                     )}
                   </td>
                 </tr>
