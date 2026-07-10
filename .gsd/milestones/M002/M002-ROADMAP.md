@@ -1,6 +1,6 @@
 ---
 description: Add SignIn Page with Convex Auth (Password provider)
-status: In Progress
+status: Done
 ---
 
 # Milestone 2: Sign In Page

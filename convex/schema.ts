@@ -16,6 +16,21 @@ export default defineSchema({
     phoneVerificationTime: v.optional(v.number()),
     isAnonymous: v.optional(v.boolean()),
     role: v.optional(v.union(v.literal("admin"), v.literal("user"))),
+    juniorCertification: v.optional(v.object({
+      country: v.string(),
+      city: v.string(),
+      province: v.string(),
+      fullName: v.string(),
+      phoneNumber: v.string(),
+      birthday: v.string(),
+      idNumber: v.string(),
+      status: v.union(v.literal("pending"), v.literal("verified"), v.literal("rejected")),
+    })),
+    advancedCertification: v.optional(v.object({
+      idCardFrontStorageId: v.id("_storage"),
+      holdingIdStorageId: v.id("_storage"),
+      status: v.union(v.literal("pending"), v.literal("verified"), v.literal("rejected")),
+    })),
   }).index("email", ["email"]).index("phone", ["phone"]),
   numbers: defineTable({
     value: v.number(),

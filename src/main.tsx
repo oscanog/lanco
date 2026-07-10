@@ -8,6 +8,9 @@ import SignIn from "./SignIn.tsx";
 import Dashboard from "./Dashboard.tsx";
 import Profile from "./Profile.tsx";
 import AdminManageUsers from "./AdminManageUsers.tsx";
+import Authentication from "./Authentication.tsx";
+import JuniorCertification from "./JuniorCertification.tsx";
+import AdvancedCertification from "./AdvancedCertification.tsx";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
@@ -24,6 +27,9 @@ function Router() {
   if (path === "/dashboard") return <Dashboard />;
   if (path === "/profile") return <Profile />;
   if (path === "/manage-users") return <AdminManageUsers />;
+  if (path === "/authentication") return <Authentication />;
+  if (path === "/junior-certification") return <JuniorCertification />;
+  if (path === "/advanced-certification") return <AdvancedCertification />;
 
   return <App />;
 }

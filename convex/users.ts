@@ -23,4 +23,27 @@ export const listUsers = query({
   }
 });
 
+export const getUser = query({
+  args: { targetUserId: v.id("users") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Unauthenticated");
+    const user = await ctx.db.get(userId);
+    if (user?.role !== "admin") throw new Error("Unauthorized");
+    
+    const targetUser = await ctx.db.get(args.targetUserId);
+    if (!targetUser) return null;
+
+    let advancedData = targetUser.advancedCertification;
+    if (advancedData) {
+      const idUrl = await ctx.storage.getUrl(advancedData.idCardFrontStorageId);
+      const holdUrl = await ctx.storage.getUrl(advancedData.holdingIdStorageId);
+      (advancedData as any).idCardFrontUrl = idUrl;
+      (advancedData as any).holdingIdUrl = holdUrl;
+    }
+
+    return targetUser;
+  }
+});
+
 
