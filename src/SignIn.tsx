@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { ArrowLeft, Globe, LayoutGrid, Loader2 } from "lucide-react";
+import { ArrowLeft, Globe, LayoutGrid, Loader2, Eye, EyeOff } from "lucide-react";
 
 export default function SignIn() {
   const { signIn } = useAuthActions();
@@ -10,6 +10,7 @@ export default function SignIn() {
   const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,11 +32,13 @@ export default function SignIn() {
         window.location.href = "/dashboard";
       }
     } catch (e: any) {
-      setError(
-        typeof e === "object" && e?.message
-          ? e.message
-          : "Invalid credentials. Please try again.",
-      );
+      // Graceful error handling mapping Convex ugly errors to user-friendly text
+      const msg = typeof e === "object" && e?.message ? e.message : String(e);
+      if (msg.includes("InvalidSecret") || msg.includes("credentials") || msg.toLowerCase().includes("invalid account")) {
+        setError("Invalid email or password. Please try again.");
+      } else {
+        setError("An unexpected error occurred during login. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -128,13 +131,22 @@ export default function SignIn() {
             <label className="mb-2 block text-sm font-medium text-[#424242]/70">
               your password
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full rounded-2xl border border-[#424242]/20 px-4 py-3.5 text-base tracking-widest text-[#262626] outline-none transition focus:border-[#229799] focus:ring-1 focus:ring-[#229799]"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className={`w-full rounded-2xl border border-[#424242]/20 px-4 py-3.5 pr-12 text-base text-[#262626] outline-none transition focus:border-[#229799] focus:ring-1 focus:ring-[#229799] ${!showPassword ? 'tracking-widest' : ''}`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#229799] transition"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
           <div className="mb-8 flex items-center gap-2">

@@ -2,7 +2,37 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
-import { ArrowLeft, UserPlus, Eye, X, KeySquare, Wand2, CheckCircle, AlertCircle, Copy, Check, Loader2, UserCheck, UploadCloud } from "lucide-react";
+import { ArrowLeft, UserPlus, Eye, X, KeySquare, Wand2, CheckCircle, AlertCircle, Copy, Check, Loader2, UserCheck, UploadCloud, Search, SlidersHorizontal, ArrowUpDown, Clock, ShieldCheck, ShieldX } from "lucide-react";
+
+// ── Status Badge ──
+function StatusBadge({ status }: { status: string }) {
+  if (status === "verified") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30">
+        <ShieldCheck size={13} /> Verified
+      </span>
+    );
+  }
+  if (status === "pending") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30">
+        <Clock size={13} /> Pending
+      </span>
+    );
+  }
+  if (status === "rejected") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30">
+        <ShieldX size={13} /> Rejected
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-700">
+      Unverified
+    </span>
+  );
+}
 
 // ── Toast System ──
 type Toast = { id: number; message: string; type: "success" | "error" };
@@ -72,6 +102,13 @@ export default function AdminManageUsers() {
   // Meal Allowance
   const mealInputRef = useRef<HTMLInputElement>(null);
   const [mealUploading, setMealUploading] = useState(false);
+
+  // Search, filter, sort
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterBy, setFilterBy] = useState("all");
+  const [sortBy, setSortBy] = useState("latest");
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
 
   // @ts-ignore
   const approveCert = useMutation(api.certifications.approveCertification);
@@ -431,88 +468,205 @@ export default function AdminManageUsers() {
       )}
 
       {/* ── Main View ── */}
-      <div className="flex items-center mb-8">
-        <a href="/dashboard" className="p-2 -ml-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition">
-          <ArrowLeft size={24} className="text-gray-700 dark:text-gray-300" />
-        </a>
-        <h1 className="text-2xl font-bold ml-4 text-gray-800 dark:text-white">Manage Users</h1>
-      </div>
-
-      <div className="flex justify-end mb-4">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center">
+          <a href="/dashboard" className="p-2 -ml-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition">
+            <ArrowLeft size={24} className="text-gray-700 dark:text-gray-300" />
+          </a>
+          <h1 className="text-2xl font-bold ml-4 text-gray-800 dark:text-white">Manage Users</h1>
+        </div>
         <button onClick={() => { setCreateModal(true); setCopiedPw(false); }} className="flex items-center gap-2 bg-[#229799] hover:bg-[#1d8587] text-white px-4 py-2.5 rounded-xl font-medium shadow-sm transition">
           <UserPlus size={18} /> Create New User
         </button>
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 text-sm">
-              <tr>
-                <th className="px-6 py-4 font-medium">Email</th>
-                <th className="px-6 py-4 font-medium">Role</th>
-                <th className="px-6 py-4 font-medium">Actions</th>
-                <th className="px-6 py-4 font-medium">Junior Cert</th>
-                <th className="px-6 py-4 font-medium">Advanced Cert</th>
-                <th className="px-6 py-4 font-medium">Meal Allowance</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {users.map((u: any) => (
-                <tr key={u._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
-                  <td className="px-6 py-4 font-medium text-gray-800 dark:text-gray-100">{u.email || "No email"}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide ${
-                      u.role === "admin"
-                        ? "bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300"
-                        : "bg-[#48CFCB]/20 text-[#229799] dark:text-[#48CFCB]"
-                    }`}>
-                      {u.role || "user"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                     <button onClick={() => setSelectedUserId(u._id)} className="flex items-center justify-center gap-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold transition">
-                        <Eye size={14} /> View
-                     </button>
-                  </td>
-                  <td className="px-6 py-4 text-xs font-semibold">
-                    {u.juniorCertification?.status === "pending" ? (
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => handleApprove(u._id, "junior")} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg px-2.5 py-1 transition">Approve</button>
-                        <button onClick={() => handleReject(u._id, "junior")} className="bg-red-500 hover:bg-red-600 text-white rounded-lg px-2.5 py-1 transition">Reject</button>
-                      </div>
-                    ) : (
-                      <span className="text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{u.juniorCertification?.status || "unverified"}</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-xs font-semibold">
-                    {u.advancedCertification?.status === "pending" ? (
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => handleApprove(u._id, "advanced")} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg px-2.5 py-1 transition">Approve</button>
-                        <button onClick={() => handleReject(u._id, "advanced")} className="bg-red-500 hover:bg-red-600 text-white rounded-lg px-2.5 py-1 transition">Reject</button>
-                      </div>
-                    ) : (
-                      <span className="text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{u.advancedCertification?.status || "unverified"}</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-xs font-semibold">
-                    {u.mealAllowance?.status === "pending" ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-orange-500 border border-orange-500 bg-orange-50 dark:bg-orange-950/30 px-2 py-1 rounded">Pending Check</span>
-                      </div>
-                    ) : (
-                      <span className="text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{u.mealAllowance?.status || "unverified"}</span>
-                    )}
-                  </td>
-                </tr>
+      {/* ── Search / Filter / Sort Toolbar ── */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        {/* Search */}
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-white text-sm outline-none focus:border-[#229799] dark:focus:border-[#48CFCB] transition"
+          />
+        </div>
+
+        {/* Filter */}
+        <div className="relative">
+          <button
+            onClick={() => { setShowFilterMenu(!showFilterMenu); setShowSortMenu(false); }}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition ${
+              filterBy !== "all"
+                ? "border-[#229799] bg-[#229799]/10 text-[#229799] dark:text-[#48CFCB] dark:border-[#48CFCB]"
+                : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+            }`}
+          >
+            <SlidersHorizontal size={16} /> Filter
+          </button>
+          {showFilterMenu && (
+            <div className="absolute top-full mt-2 right-0 w-52 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl z-30 py-1 animate-slide-in">
+              {[
+                { value: "all", label: "All Users" },
+                { value: "admin", label: "Admins Only" },
+                { value: "user", label: "Users Only" },
+                { value: "has_pending", label: "Has Pending Cert" },
+                { value: "all_verified", label: "Fully Verified" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => { setFilterBy(opt.value); setShowFilterMenu(false); }}
+                  className={`w-full text-left px-4 py-2.5 text-sm transition ${
+                    filterBy === opt.value
+                      ? "bg-[#229799]/10 text-[#229799] dark:text-[#48CFCB] font-semibold"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  {opt.label}
+                </button>
               ))}
-            </tbody>
-          </table>
-          {users.length === 0 && (
-            <div className="p-8 text-center text-gray-500 dark:text-gray-400">No users found.</div>
+            </div>
+          )}
+        </div>
+
+        {/* Sort */}
+        <div className="relative">
+          <button
+            onClick={() => { setShowSortMenu(!showSortMenu); setShowFilterMenu(false); }}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition ${
+              sortBy !== "latest"
+                ? "border-[#229799] bg-[#229799]/10 text-[#229799] dark:text-[#48CFCB] dark:border-[#48CFCB]"
+                : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+            }`}
+          >
+            <ArrowUpDown size={16} /> Sort
+          </button>
+          {showSortMenu && (
+            <div className="absolute top-full mt-2 right-0 w-52 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl z-30 py-1 animate-slide-in">
+              {[
+                { value: "latest", label: "Latest Created" },
+                { value: "oldest", label: "Oldest Created" },
+                { value: "email_asc", label: "Email (A → Z)" },
+                { value: "email_desc", label: "Email (Z → A)" },
+                { value: "role", label: "Role (Admin First)" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => { setSortBy(opt.value); setShowSortMenu(false); }}
+                  className={`w-full text-left px-4 py-2.5 text-sm transition ${
+                    sortBy === opt.value
+                      ? "bg-[#229799]/10 text-[#229799] dark:text-[#48CFCB] font-semibold"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </div>
+
+      {/* ── Processed Users ── */}
+      {(() => {
+        // Filter
+        let filtered = [...(users || [])] as any[];
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          filtered = filtered.filter((u: any) => (u.email || "").toLowerCase().includes(q));
+        }
+        if (filterBy === "admin") filtered = filtered.filter((u: any) => u.role === "admin");
+        else if (filterBy === "user") filtered = filtered.filter((u: any) => u.role !== "admin");
+        else if (filterBy === "has_pending") filtered = filtered.filter((u: any) =>
+          u.juniorCertification?.status === "pending" || u.advancedCertification?.status === "pending" || u.mealAllowance?.status === "pending"
+        );
+        else if (filterBy === "all_verified") filtered = filtered.filter((u: any) =>
+          u.juniorCertification?.status === "verified" && u.advancedCertification?.status === "verified"
+        );
+
+        // Sort
+        if (sortBy === "latest") filtered.sort((a: any, b: any) => (b._creationTime || 0) - (a._creationTime || 0));
+        else if (sortBy === "oldest") filtered.sort((a: any, b: any) => (a._creationTime || 0) - (b._creationTime || 0));
+        else if (sortBy === "email_asc") filtered.sort((a: any, b: any) => (a.email || "").localeCompare(b.email || ""));
+        else if (sortBy === "email_desc") filtered.sort((a: any, b: any) => (b.email || "").localeCompare(a.email || ""));
+        else if (sortBy === "role") filtered.sort((a: any, b: any) => (a.role === "admin" ? -1 : 1) - (b.role === "admin" ? -1 : 1));
+
+        return (
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 text-sm">
+                  <tr>
+                    <th className="px-6 py-4 font-medium">Email</th>
+                    <th className="px-6 py-4 font-medium">Role</th>
+                    <th className="px-6 py-4 font-medium">Actions</th>
+                    <th className="px-6 py-4 font-medium">Junior Cert</th>
+                    <th className="px-6 py-4 font-medium">Advanced Cert</th>
+                    <th className="px-6 py-4 font-medium">Meal Allowance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {filtered.map((u: any) => (
+                    <tr key={u._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                      <td className="px-6 py-4 font-medium text-gray-800 dark:text-gray-100">{u.email || "No email"}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide ${
+                          u.role === "admin"
+                            ? "bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300"
+                            : "bg-[#48CFCB]/20 text-[#229799] dark:text-[#48CFCB]"
+                        }`}>
+                          {u.role || "user"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                         <button onClick={() => setSelectedUserId(u._id)} className="flex items-center justify-center gap-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold transition">
+                            <Eye size={14} /> View
+                         </button>
+                      </td>
+                      <td className="px-6 py-4">
+                        {u.juniorCertification?.status === "pending" ? (
+                          <div className="flex items-center gap-2">
+                            <StatusBadge status="pending" />
+                            <button onClick={() => handleApprove(u._id, "junior")} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg px-2 py-1 text-xs transition">✓</button>
+                            <button onClick={() => handleReject(u._id, "junior")} className="bg-red-500 hover:bg-red-600 text-white rounded-lg px-2 py-1 text-xs transition">✗</button>
+                          </div>
+                        ) : (
+                          <StatusBadge status={u.juniorCertification?.status || "unverified"} />
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {u.advancedCertification?.status === "pending" ? (
+                          <div className="flex items-center gap-2">
+                            <StatusBadge status="pending" />
+                            <button onClick={() => handleApprove(u._id, "advanced")} className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg px-2 py-1 text-xs transition">✓</button>
+                            <button onClick={() => handleReject(u._id, "advanced")} className="bg-red-500 hover:bg-red-600 text-white rounded-lg px-2 py-1 text-xs transition">✗</button>
+                          </div>
+                        ) : (
+                          <StatusBadge status={u.advancedCertification?.status || "unverified"} />
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {u.mealAllowance?.status === "pending" ? (
+                          <StatusBadge status="pending" />
+                        ) : (
+                          <StatusBadge status={u.mealAllowance?.status || "unverified"} />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filtered.length === 0 && (
+                <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                  {searchQuery || filterBy !== "all" ? "No users match your search/filter." : "No users found."}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       <style>{`
         @keyframes slide-in {
