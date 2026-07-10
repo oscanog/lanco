@@ -38,6 +38,12 @@ export default defineSchema({
       storageId: v.optional(v.id("_storage")),
       rejectionReason: v.optional(v.string()),
     })),
+    fundPasswordHash: v.optional(v.string()),
+    wallets: v.optional(v.object({
+      exchangeBalance: v.number(),   // default 0
+      tradeBalance: v.number(),      // default 0
+      perpetualBalance: v.number(),  // default 0
+    })),
   }).index("email", ["email"]).index("phone", ["phone"]),
   numbers: defineTable({
     value: v.number(),
@@ -45,4 +51,20 @@ export default defineSchema({
   settings: defineTable({
     displayCurrency: v.string(), // ISO 4217, e.g. 'USD', 'EUR'
   }),
+  withdrawals: defineTable({
+    userId: v.id("users"),
+    currency: v.string(),                    // "USDT" | "ETH" | "USDC"
+    network: v.string(),                     // "TRC20" | "ERC20"
+    walletAddress: v.string(),
+    withdrawalAmount: v.number(),
+    handlingFee: v.number(),                 // always = withdrawalAmount * 0.20
+    amountReceived: v.number(),              // always = withdrawalAmount - handlingFee
+    status: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("disbursed"),
+      v.literal("rejected")
+    ),
+    createdAt: v.number(),                   // Date.now() timestamp
+  }).index("by_user", ["userId"]),
 });

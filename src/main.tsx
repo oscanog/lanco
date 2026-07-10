@@ -12,6 +12,11 @@ import Authentication from "./Authentication.tsx";
 import JuniorCertification from "./JuniorCertification.tsx";
 import AdvancedCertification from "./AdvancedCertification.tsx";
 import MyAssets from "./MyAssets.tsx";
+import Withdraw from "./Withdraw.tsx";
+import Transfer from "./Transfer.tsx";
+import WithdrawalRecords from "./WithdrawalRecords.tsx";
+import SecurityCenter from "./SecurityCenter.tsx";
+import FundPassword from "./FundPassword.tsx";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
@@ -32,6 +37,11 @@ function Router() {
   if (path === "/junior-certification") return <JuniorCertification />;
   if (path === "/advanced-certification") return <AdvancedCertification />;
   if (path === "/my-assets") return <MyAssets />;
+  if (path === "/withdraw") return <Withdraw />;
+  if (path === "/transfer") return <Transfer />;
+  if (path === "/withdrawal-records") return <WithdrawalRecords />;
+  if (path === "/security-center") return <SecurityCenter />;
+  if (path === "/fund-password") return <FundPassword />;
 
   return <App />;
 }

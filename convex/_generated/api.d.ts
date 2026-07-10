@@ -13,8 +13,11 @@ import type * as auth from "../auth.js";
 import type * as certifications from "../certifications.js";
 import type * as http from "../http.js";
 import type * as myFunctions from "../myFunctions.js";
+import type * as security from "../security.js";
 import type * as settings from "../settings.js";
 import type * as users from "../users.js";
+import type * as wallets from "../wallets.js";
+import type * as withdrawals from "../withdrawals.js";
 
 import type {
   ApiFromModules,
@@ -28,8 +31,11 @@ declare const fullApi: ApiFromModules<{
   certifications: typeof certifications;
   http: typeof http;
   myFunctions: typeof myFunctions;
+  security: typeof security;
   settings: typeof settings;
   users: typeof users;
+  wallets: typeof wallets;
+  withdrawals: typeof withdrawals;
 }>;
 
 /**

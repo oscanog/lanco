@@ -39,7 +39,7 @@ export default function Profile() {
 
   const menuItems = [
     { label: "simulated trading", type: "toggle", state: simulated, setState: setSimulated },
-    { label: "security center" },
+    { label: "security center", onClick: () => window.location.href = "/security-center" },
     { label: "authentication", onClick: () => window.location.href = "/authentication" },
     { label: "language" },
     { label: "invite friends" },

@@ -1,4 +1,4 @@
-import { ArrowRight, Eye, RefreshCw, Send, Wallet, Scan, Zap, Home, Repeat, Users, CircleDollarSign } from "lucide-react";
+import { ArrowRight, Eye, RefreshCw, Wallet, Scan, Zap, Home, Repeat, Users, CircleDollarSign } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 
@@ -6,6 +6,8 @@ export default function MyAssets() {
   const settings = useQuery(api.settings.getSettings);
   // @ts-ignore
   const me = useQuery(api.users.getMe);
+  // @ts-ignore
+  const wallets = useQuery(api.wallets.getWallets);
   
   const currencyCode = settings?.displayCurrency || "USD";
 
@@ -17,7 +19,10 @@ export default function MyAssets() {
     }).format(val);
   };
 
-  const DUMMY_BALANCE = 1261.55;
+  const exchangeBal = wallets?.exchangeBalance ?? 0;
+  const tradeBal = wallets?.tradeBalance ?? 0;
+  const perpetualBal = wallets?.perpetualBalance ?? 0;
+  const totalBalance = exchangeBal + tradeBal + perpetualBal;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#A5C8FE] to-[#F5F7F8] dark:from-[#1E3A8A] dark:to-gray-950 text-[#424242] dark:text-gray-200 font-sans pb-24 transition-colors">
@@ -40,7 +45,7 @@ export default function MyAssets() {
             </div>
             
             <div className="text-[40px] font-bold tracking-tight mb-2 leading-none">
-              {SettingsLoaded(settings) ? formatValue(DUMMY_BALANCE) : "..."}
+              {SettingsLoaded(settings) ? formatValue(totalBalance) : "..."}
             </div>
             
             <div className="text-sm text-white/90 flex gap-1 items-center">
@@ -50,9 +55,9 @@ export default function MyAssets() {
 
           {/* Bottom Half: Pale Blue */}
           <div className="bg-[#E4EFFF] dark:bg-gray-800 px-2 py-6 flex justify-around">
-            <ActionIcon icon={<CircleDollarSign size={24} />} label="withdraw" />
+            <ActionIcon icon={<CircleDollarSign size={24} />} label="withdraw" href="/withdraw" />
             <ActionIcon icon={<Wallet size={24} />} label="recharge" />
-            <ActionIcon icon={<RefreshCw size={24} />} label="transfer" />
+            <ActionIcon icon={<RefreshCw size={24} />} label="transfer" href="/transfer" />
             <ActionIcon icon={<Scan size={24} />} label="exchange" />
           </div>
         </div>
@@ -64,13 +69,13 @@ export default function MyAssets() {
         <p className="text-sm text-[#424242] dark:text-gray-400 mb-5">Trading volume: 0</p>
 
         <div className="flex flex-col gap-4">
-          <AccountCard title="Exchange" balance={0} currencyCode={currencyCode} settingsLoaded={SettingsLoaded(settings)} />
-          <AccountCard title="Trade" balance={DUMMY_BALANCE} currencyCode={currencyCode} settingsLoaded={SettingsLoaded(settings)} />
-          <AccountCard title="Perpetual" balance={0} currencyCode={currencyCode} settingsLoaded={SettingsLoaded(settings)} />
+          <AccountCard title="Exchange" balance={exchangeBal} currencyCode={currencyCode} settingsLoaded={SettingsLoaded(settings)} />
+          <AccountCard title="Trade" balance={tradeBal} currencyCode={currencyCode} settingsLoaded={SettingsLoaded(settings)} />
+          <AccountCard title="Perpetual" balance={perpetualBal} currencyCode={currencyCode} settingsLoaded={SettingsLoaded(settings)} />
         </div>
       </div>
 
-      {/* Bottom Navigation Navbar included strictly for context */}
+      {/* Bottom Navigation */}
       <nav className="fixed bottom-0 inset-x-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex justify-around p-3 transition-colors pb-safe">
         <NavItem href="/dashboard" icon={Home} label="home" />
         <NavItem href="#" icon={Zap} label="quotes" />
@@ -88,9 +93,17 @@ function SettingsLoaded(settings: any) {
   return settings !== undefined;
 }
 
-function ActionIcon({ icon, label }: { icon: any; label: string }) {
+function ActionIcon({ icon, label, href }: { icon: any; label: string; href?: string }) {
+  const handleClick = () => {
+    if (href) {
+      window.location.href = href;
+    } else {
+      alert("Coming soon");
+    }
+  };
+
   return (
-    <div className="flex flex-col items-center gap-2 cursor-pointer transition active:scale-95">
+    <div onClick={handleClick} className="flex flex-col items-center gap-2 cursor-pointer transition active:scale-95">
       <div className="w-[50px] h-[50px] rounded-full bg-[#1860F5] text-white flex items-center justify-center shadow-sm hover:shadow-md transition">
         {icon}
       </div>
