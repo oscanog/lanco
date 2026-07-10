@@ -191,14 +191,19 @@ function Navbar({
           <Button href="#pricing">Start Free</Button>
         </div>
 
-        <button
-          className="grid size-10 place-items-center rounded-lg border border-[#424242]/10 bg-white/70 text-[#424242] lg:hidden"
-          type="button"
-          aria-label="Toggle menu"
-          onClick={() => setMenuOpen(!menuOpen)}
-        >
-          {menuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
+        <div className="flex items-center gap-4 lg:hidden">
+          <a href="/signin" className="text-sm font-semibold text-[#229799] transition hover:text-[#1d8587]">
+            Sign In
+          </a>
+          <button
+            className="grid size-10 place-items-center rounded-lg border border-[#424242]/10 bg-white/70 text-[#424242]"
+            type="button"
+            aria-label="Toggle menu"
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
       </nav>
 
       {menuOpen ? (

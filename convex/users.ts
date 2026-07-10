@@ -22,3 +22,15 @@ export const listUsers = query({
     return await ctx.db.query("users").collect();
   }
 });
+
+export const makeAdmin = mutation({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.query("users").withIndex("email", (q) => q.eq("email", args.email)).first();
+    if (user) {
+      await ctx.db.patch(user._id, { role: "admin" });
+      return "Made admin!";
+    }
+    return "User not found";
+  }
+});
