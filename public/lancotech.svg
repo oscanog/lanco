@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Lancotech">
+  <defs>
+    <linearGradient id="g" x1="12" y1="10" x2="52" y2="54" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#48CFCB" />
+      <stop offset="1" stop-color="#229799" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#F5F5F5" />
+  <rect x="9" y="9" width="46" height="46" rx="12" fill="url(#g)" />
+  <path d="M23 18h8v21h16v7H23V18Z" fill="white" />
+</svg>
