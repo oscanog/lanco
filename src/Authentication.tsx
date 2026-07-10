@@ -68,6 +68,12 @@ export default function Authentication() {
           }`}>
             {juniorStatus}
           </div>
+          {juniorStatus === 'rejected' && juniorObj?.rejectionReason && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-center">
+              <span className="block text-xs font-bold text-red-600 uppercase mb-1">Reason for Rejection</span>
+              <span className="text-sm font-medium text-red-700">{juniorObj.rejectionReason}</span>
+            </div>
+          )}
         </div>
 
         {/* Advanced Certification */}
@@ -91,6 +97,12 @@ export default function Authentication() {
           }`}>
             {advancedStatus}
           </div>
+          {advancedStatus === 'rejected' && advancedObj?.rejectionReason && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-center">
+              <span className="block text-xs font-bold text-red-600 uppercase mb-1">Reason for Rejection</span>
+              <span className="text-sm font-medium text-red-700">{advancedObj.rejectionReason}</span>
+            </div>
+          )}
         </div>
 
         {/* Meal Allowance Reimbursement */}
@@ -114,6 +126,12 @@ export default function Authentication() {
           }`}>
             {mealStatus}
           </div>
+          {mealStatus === 'rejected' && mealObj?.rejectionReason && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-center">
+              <span className="block text-xs font-bold text-red-600 uppercase mb-1">Reason for Rejection</span>
+              <span className="text-sm font-medium text-red-700">{mealObj.rejectionReason}</span>
+            </div>
+          )}
         </div>
 
       </div>

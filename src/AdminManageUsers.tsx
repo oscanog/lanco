@@ -110,6 +110,12 @@ export default function AdminManageUsers() {
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
 
+  // Rejection Modal
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState<{ userId: Id<"users">, type: "junior" | "advanced" | "mealAllowance" } | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [isRejecting, setIsRejecting] = useState(false);
+
   // @ts-ignore
   const approveCert = useMutation(api.certifications.approveCertification);
   // @ts-ignore
@@ -142,9 +148,23 @@ export default function AdminManageUsers() {
     try { await approveCert({ targetUserId: userId, type }); addToast(`${type} approved!`, "success"); }
     catch (e: any) { addToast(e.message || "Failed to approve.", "error"); }
   };
-  const handleReject = async (userId: Id<"users">, type: "junior" | "advanced" | "mealAllowance") => {
-    try { await rejectCert({ targetUserId: userId, type }); addToast(`${type} rejected.`, "success"); }
+  const handleReject = (userId: Id<"users">, type: "junior" | "advanced" | "mealAllowance") => {
+    setRejectTarget({ userId, type });
+    setRejectReason("");
+    setRejectModalOpen(true);
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectTarget) return;
+    setIsRejecting(true);
+    try { 
+      await rejectCert({ targetUserId: rejectTarget.userId, type: rejectTarget.type, reason: rejectReason.trim() || undefined }); 
+      addToast(`${rejectTarget.type} rejected.`, "success");
+      setRejectModalOpen(false);
+      setRejectTarget(null);
+    }
     catch (e: any) { addToast(e.message || "Failed to reject.", "error"); }
+    finally { setIsRejecting(false); }
   };
 
   const handleMealUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -331,6 +351,36 @@ export default function AdminManageUsers() {
         </div>
       )}
 
+      {/* ── Rejection Modal ── */}
+      {rejectModalOpen && rejectTarget && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={() => setRejectModalOpen(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm p-6 relative shadow-2xl border border-red-500/30" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setRejectModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"><X size={20} /></button>
+            <h2 className="text-xl font-bold mb-1 text-gray-800 dark:text-white flex items-center gap-2">
+               <ShieldX size={20} className="text-red-500" /> Reject Certification
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+              Please optionally provide a reason for rejecting this <span className="font-bold text-gray-700 dark:text-gray-300 capitalize">{rejectTarget.type}</span> request. The user will see this message.
+            </p>
+
+            <textarea
+              placeholder="e.g., ID is too blurry, or mismatching name..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-xl p-3 bg-gray-50 dark:bg-gray-800 dark:text-white outline-none focus:border-red-400 dark:focus:border-red-500 transition text-sm mb-4 min-h-[100px] resize-none"
+            />
+            
+            <button
+              onClick={handleConfirmReject}
+              disabled={isRejecting}
+              className="w-full bg-red-500 hover:bg-red-600 text-white rounded-xl py-3 font-semibold transition disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {isRejecting && <Loader2 size={18} className="animate-spin" />} Confirm Rejection
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Reset Password Modal ── */}
       {resetModal && selectedUser && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={() => setResetModal(false)}>
@@ -395,6 +445,12 @@ export default function AdminManageUsers() {
                 <div><span className="text-gray-400 dark:text-gray-500 text-xs uppercase font-bold block">Birthday</span> <span className="dark:text-gray-200">{selectedUser.juniorCertification.birthday}</span></div>
                 <div><span className="text-gray-400 dark:text-gray-500 text-xs uppercase font-bold block">ID Number</span> <span className="dark:text-gray-200">{selectedUser.juniorCertification.idNumber}</span></div>
                 <div><span className="text-gray-400 dark:text-gray-500 text-xs uppercase font-bold block">Location</span> <span className="dark:text-gray-200">{selectedUser.juniorCertification.city}, {selectedUser.juniorCertification.province}, {selectedUser.juniorCertification.country}</span></div>
+                {selectedUser.juniorCertification.status === "rejected" && selectedUser.juniorCertification.rejectionReason && (
+                   <div className="col-span-2 mt-2 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg">
+                      <span className="text-red-600 dark:text-red-400 text-xs uppercase font-bold block mb-1">Rejection Reason</span>
+                      <span className="text-red-700 dark:text-red-300 text-sm font-medium">{selectedUser.juniorCertification.rejectionReason}</span>
+                   </div>
+                )}
               </div>
             ) : <div className="text-gray-400 dark:text-gray-500 mb-6 italic">No junior certification submitted.</div>}
 
@@ -421,6 +477,12 @@ export default function AdminManageUsers() {
                      )}
                    </div>
                 </div>
+                {selectedUser.advancedCertification.status === "rejected" && selectedUser.advancedCertification.rejectionReason && (
+                   <div className="mt-2 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg">
+                      <span className="text-red-600 dark:text-red-400 text-xs uppercase font-bold block mb-1">Rejection Reason</span>
+                      <span className="text-red-700 dark:text-red-300 text-sm font-medium">{selectedUser.advancedCertification.rejectionReason}</span>
+                   </div>
+                )}
               </div>
             ) : <div className="text-gray-400 dark:text-gray-500 italic mb-6">No advanced certification submitted.</div>}
 
@@ -454,6 +516,12 @@ export default function AdminManageUsers() {
                      </div>
                    )}
                  </div>
+                 {selectedUser.mealAllowance.status === "rejected" && (selectedUser.mealAllowance as any).rejectionReason && (
+                    <div className="p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg -mt-1">
+                       <span className="text-red-600 dark:text-red-400 text-xs uppercase font-bold block mb-1">Rejection Reason</span>
+                       <span className="text-red-700 dark:text-red-300 text-sm font-medium">{(selectedUser.mealAllowance as any).rejectionReason}</span>
+                    </div>
+                 )}
                  {(selectedUser.mealAllowance as any).mealAllowanceUrl && (
                    <div>
                      <span className="text-gray-500 dark:text-gray-400 text-sm font-semibold mb-2 block">Uploaded Receipt / Document</span>

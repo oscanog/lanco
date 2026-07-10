@@ -65,24 +65,30 @@ export const approveCertification = mutation({
     if (!targetUser) throw new Error("User not found");
 
     if (args.type === "junior" && targetUser.juniorCertification) {
+      // Clear any past rejection reason on approve
       await ctx.db.patch(args.targetUserId, {
         juniorCertification: {
           ...targetUser.juniorCertification,
           status: "verified",
+          rejectionReason: undefined,
         },
       });
     } else if (args.type === "advanced" && targetUser.advancedCertification) {
+      // Clear any past rejection reason on approve
       await ctx.db.patch(args.targetUserId, {
         advancedCertification: {
           ...targetUser.advancedCertification,
           status: "verified",
+          rejectionReason: undefined,
         },
       });
     } else if (args.type === "mealAllowance" && targetUser.mealAllowance) {
+      // Clear any past rejection reason on approve
       await ctx.db.patch(args.targetUserId, {
         mealAllowance: {
           ...targetUser.mealAllowance,
           status: "verified",
+          rejectionReason: undefined,
         },
       });
     }
@@ -90,7 +96,11 @@ export const approveCertification = mutation({
 });
 
 export const rejectCertification = mutation({
-  args: { targetUserId: v.id("users"), type: v.union(v.literal("junior"), v.literal("advanced"), v.literal("mealAllowance")) },
+  args: { 
+    targetUserId: v.id("users"), 
+    type: v.union(v.literal("junior"), v.literal("advanced"), v.literal("mealAllowance")),
+    reason: v.optional(v.string())
+  },
   handler: async (ctx, args) => {
     const adminId = await getAuthUserId(ctx);
     if (!adminId) throw new Error("Unauthenticated");
@@ -102,15 +112,15 @@ export const rejectCertification = mutation({
 
     if (args.type === "junior" && targetUser.juniorCertification) {
       await ctx.db.patch(args.targetUserId, {
-        juniorCertification: { ...targetUser.juniorCertification, status: "rejected" },
+        juniorCertification: { ...targetUser.juniorCertification, status: "rejected", rejectionReason: args.reason },
       });
     } else if (args.type === "advanced" && targetUser.advancedCertification) {
       await ctx.db.patch(args.targetUserId, {
-        advancedCertification: { ...targetUser.advancedCertification, status: "rejected" },
+        advancedCertification: { ...targetUser.advancedCertification, status: "rejected", rejectionReason: args.reason },
       });
     } else if (args.type === "mealAllowance" && targetUser.mealAllowance) {
       await ctx.db.patch(args.targetUserId, {
-        mealAllowance: { ...targetUser.mealAllowance, status: "unverified" },
+        mealAllowance: { ...targetUser.mealAllowance, status: "rejected", rejectionReason: args.reason },
       });
     }
   },

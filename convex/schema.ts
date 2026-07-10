@@ -25,15 +25,18 @@ export default defineSchema({
       birthday: v.string(),
       idNumber: v.string(),
       status: v.union(v.literal("pending"), v.literal("verified"), v.literal("rejected")),
+      rejectionReason: v.optional(v.string()),
     })),
     advancedCertification: v.optional(v.object({
       idCardFrontStorageId: v.id("_storage"),
       holdingIdStorageId: v.id("_storage"),
       status: v.union(v.literal("pending"), v.literal("verified"), v.literal("rejected")),
+      rejectionReason: v.optional(v.string()),
     })),
     mealAllowance: v.optional(v.object({
-      status: v.union(v.literal("unverified"), v.literal("pending"), v.literal("verified")),
+      status: v.union(v.literal("unverified"), v.literal("pending"), v.literal("verified"), v.literal("rejected")),
       storageId: v.optional(v.id("_storage")),
+      rejectionReason: v.optional(v.string()),
     })),
   }).index("email", ["email"]).index("phone", ["phone"]),
   numbers: defineTable({
