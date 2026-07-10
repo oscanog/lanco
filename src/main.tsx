@@ -23,6 +23,8 @@ import RechargeRecords from "./RechargeRecords.tsx";
 import AdminDeposit from "./AdminDeposit.tsx";
 import AdminDepositLogs from "./AdminDepositLogs.tsx";
 import AdminWalletConfig from "./AdminWalletConfig.tsx";
+import Trade from "./Trade.tsx";
+import AdminCopyTrade from "./AdminCopyTrade.tsx";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
@@ -54,6 +56,8 @@ function Router() {
   if (path === "/admin/deposit") return <AdminDeposit />;
   if (path === "/admin/deposit-logs") return <AdminDepositLogs />;
   if (path === "/admin/wallet-config") return <AdminWalletConfig />;
+  if (path === "/trade") return <Trade />;
+  if (path === "/admin/copy-trade") return <AdminCopyTrade />;
 
   return <App />;
 }

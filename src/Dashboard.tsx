@@ -72,7 +72,7 @@ export default function Dashboard() {
       <nav className="fixed bottom-0 inset-x-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-around p-3 transition-colors">
         <NavItem href="/dashboard" icon={Home} label="home" active />
         <NavItem href="#" icon={Zap} label="quotes" />
-        <NavItem href="#" icon={Repeat} label="trade" />
+        <NavItem href="/trade" icon={Repeat} label="trade" />
         {me?.role === "admin" && (
           <NavItem href="/manage-users" icon={Users} label="manage users" />
         )}

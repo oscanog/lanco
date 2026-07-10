@@ -587,6 +587,12 @@ export default function AdminManageUsers() {
         </div>
         <div className="flex flex-col sm:flex-row gap-3 items-center w-full md:w-auto">
           <a 
+            href="/admin/copy-trade" 
+            className="w-full sm:w-auto text-center bg-[#229799] hover:bg-[#1d8587] text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm transition text-sm whitespace-nowrap"
+          >
+            Manage Copy Trades
+          </a>
+          <a 
             href="/admin/wallet-config" 
             className="w-full sm:w-auto text-center bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm transition text-sm whitespace-nowrap"
           >

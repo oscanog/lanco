@@ -90,4 +90,56 @@ export default defineSchema({
     updatedByAdminId: v.id("users"),
     updatedAt: v.number(),
   }).index("by_currency_network", ["currency", "network"]),
+
+  deliveryOrders: defineTable({
+    userId: v.id("users"),
+    symbol: v.string(),
+    direction: v.union(v.literal("CALL"), v.literal("PUT")),
+    durationSeconds: v.number(),
+    amount: v.number(),
+    openingPrice: v.number(),
+    settlementPrice: v.optional(v.number()),
+    profitAndLoss: v.optional(v.number()),
+    rateOfReturn: v.number(),
+    status: v.union(v.literal("pending"), v.literal("completed")),
+    periodStart: v.string(),
+    periodEnd: v.string(),
+    createdAt: v.number(),
+    settlesAt: v.number(),
+  }).index("by_user", ["userId"])
+    .index("by_status", ["status"])
+    .index("by_user_and_status", ["userId", "status"])
+    .index("by_settlesAt", ["settlesAt"]),
+
+  copyTradeCodes: defineTable({
+    code: v.string(),
+    createdByAdminId: v.id("users"),
+    interestRate: v.number(),
+    orderAmount: v.number(),
+    direction: v.union(v.literal("CALL"), v.literal("PUT")),
+    symbol: v.string(),
+    durationSeconds: v.number(),
+    status: v.union(v.literal("active"), v.literal("expired"), v.literal("consumed")),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+  }).index("by_code", ["code"])
+    .index("by_createdByAdminId", ["createdByAdminId"])
+    .index("by_status", ["status"]),
+
+  copyTradeFollows: defineTable({
+    userId: v.id("users"),
+    codeId: v.id("copyTradeCodes"),
+    code: v.string(),
+    interestRateSnapshot: v.number(),
+    totalAssetSnapshot: v.number(),
+    orderAmount: v.number(),
+    direction: v.union(v.literal("CALL"), v.literal("PUT")),
+    symbol: v.string(),
+    earnedInterest: v.number(),
+    codeExpiresAt: v.optional(v.number()),
+    status: v.union(v.literal("pending"), v.literal("settled")),
+    settledAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_userId", ["userId"])
+    .index("by_codeId", ["codeId"]),
 });
