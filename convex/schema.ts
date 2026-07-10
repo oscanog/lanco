@@ -42,4 +42,7 @@ export default defineSchema({
   numbers: defineTable({
     value: v.number(),
   }),
+  settings: defineTable({
+    displayCurrency: v.string(), // ISO 4217, e.g. 'USD', 'EUR'
+  }),
 });

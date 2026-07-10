@@ -13,6 +13,7 @@ import type * as auth from "../auth.js";
 import type * as certifications from "../certifications.js";
 import type * as http from "../http.js";
 import type * as myFunctions from "../myFunctions.js";
+import type * as settings from "../settings.js";
 import type * as users from "../users.js";
 
 import type {
@@ -27,6 +28,7 @@ declare const fullApi: ApiFromModules<{
   certifications: typeof certifications;
   http: typeof http;
   myFunctions: typeof myFunctions;
+  settings: typeof settings;
   users: typeof users;
 }>;
 

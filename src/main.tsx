@@ -11,6 +11,7 @@ import AdminManageUsers from "./AdminManageUsers.tsx";
 import Authentication from "./Authentication.tsx";
 import JuniorCertification from "./JuniorCertification.tsx";
 import AdvancedCertification from "./AdvancedCertification.tsx";
+import MyAssets from "./MyAssets.tsx";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
@@ -30,6 +31,7 @@ function Router() {
   if (path === "/authentication") return <Authentication />;
   if (path === "/junior-certification") return <JuniorCertification />;
   if (path === "/advanced-certification") return <AdvancedCertification />;
+  if (path === "/my-assets") return <MyAssets />;
 
   return <App />;
 }

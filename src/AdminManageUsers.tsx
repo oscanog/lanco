@@ -1,8 +1,15 @@
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
 import { ArrowLeft, UserPlus, Eye, X, KeySquare, Wand2, CheckCircle, AlertCircle, Copy, Check, Loader2, UserCheck, UploadCloud, Search, SlidersHorizontal, ArrowUpDown, Clock, ShieldCheck, ShieldX } from "lucide-react";
+
+export const CURRENCIES = [
+  "AED", "ARS", "AUD", "BGN", "BHD", "BRL", "CAD", "CHF", "CLP", "CNY", 
+  "COP", "CZK", "DKK", "EUR", "GBP", "HKD", "HUF", "IDR", "ILS", "INR", 
+  "JPY", "KRW", "MXN", "MYR", "NOK", "NZD", "PEN", "PHP", "PLN", "RON", 
+  "RUB", "SAR", "SEK", "SGD", "THB", "TRY", "TWD", "USD", "ZAR"
+];
 
 // ── Status Badge ──
 function StatusBadge({ status }: { status: string }) {
@@ -116,6 +123,20 @@ export default function AdminManageUsers() {
   const [rejectReason, setRejectReason] = useState("");
   const [isRejecting, setIsRejecting] = useState(false);
 
+  // Platform Settings Searchable Dropdown
+  const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
+  const [currencySearch, setCurrencySearch] = useState("");
+  const currencyRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns when outside click
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (currencyRef.current && !currencyRef.current.contains(event.target as Node)) setIsCurrencyOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // @ts-ignore
   const approveCert = useMutation(api.certifications.approveCertification);
   // @ts-ignore
@@ -124,6 +145,10 @@ export default function AdminManageUsers() {
   const submitMealAllowance = useMutation(api.certifications.submitMealAllowance);
   // @ts-ignore
   const generateUploadUrl = useMutation(api.certifications.generateUploadUrl);
+
+  // @ts-ignore
+  const updateDisplayCurrency = useMutation(api.settings.updateDisplayCurrency);
+  const settings = useQuery(api.settings.getSettings);
 
   // @ts-ignore
   const adminCreateUser = useAction(api.admin.adminCreateUser);
@@ -546,6 +571,60 @@ export default function AdminManageUsers() {
         <button onClick={() => { setCreateModal(true); setCopiedPw(false); }} className="flex items-center gap-2 bg-[#229799] hover:bg-[#1d8587] text-white px-4 py-2.5 rounded-xl font-medium shadow-sm transition">
           <UserPlus size={18} /> Create New User
         </button>
+      </div>
+
+      {/* ── Platform Settings (Currency) ── */}
+      <div className="mb-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+           <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">Platform Settings</h3>
+           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Configure the global primary display currency.</p>
+        </div>
+        <div className="relative w-full md:w-64" ref={currencyRef}>
+          <div 
+            onClick={() => setIsCurrencyOpen(!isCurrencyOpen)}
+            className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white text-sm font-semibold rounded-xl pl-4 pr-4 py-2.5 outline-none cursor-pointer hover:border-[#229799] dark:hover:border-[#48CFCB] transition"
+          >
+            {settings?.displayCurrency || "USD"}
+            <ArrowUpDown size={14} className="text-gray-400" />
+          </div>
+
+          {isCurrencyOpen && (
+            <div className="absolute top-full right-0 left-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden flex flex-col max-h-[300px] animate-slide-in">
+              <div className="p-2 border-b border-gray-100 dark:border-gray-700">
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search currency..."
+                    value={currencySearch}
+                    onChange={(e) => setCurrencySearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-900 border border-transparent focus:border-[#229799] dark:focus:border-[#48CFCB] rounded-lg outline-none text-black dark:text-white transition"
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <div className="overflow-y-auto">
+                {CURRENCIES.filter(c => c.toLowerCase().includes(currencySearch.toLowerCase())).map(c => (
+                  <button
+                    key={c}
+                    onClick={async () => {
+                      try {
+                        await updateDisplayCurrency({ currency: c });
+                        addToast(`Global currency updated to ${c}`, "success");
+                        setIsCurrencyOpen(false);
+                      } catch (err: any) {
+                        addToast("Failed to update currency.", "error");
+                      }
+                    }}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition hover:bg-gray-50 dark:hover:bg-gray-700 ${settings?.displayCurrency === c ? 'bg-[#229799]/10 text-[#229799] dark:text-[#48CFCB] font-bold' : 'text-gray-700 dark:text-gray-300'}`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Search / Filter / Sort Toolbar ── */}

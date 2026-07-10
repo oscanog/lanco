@@ -76,7 +76,7 @@ export default function Dashboard() {
         {me?.role === "admin" && (
           <NavItem href="/manage-users" icon={Users} label="manage users" />
         )}
-        <NavItem href="#" icon={Wallet} label="my assets" />
+        <NavItem href="/my-assets" icon={Wallet} label="my assets" />
       </nav>
       
     </div>
