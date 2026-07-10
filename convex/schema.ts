@@ -17,4 +17,7 @@ export default defineSchema({
     isAnonymous: v.optional(v.boolean()),
     role: v.optional(v.union(v.literal("admin"), v.literal("user"))),
   }).index("email", ["email"]).index("phone", ["phone"]),
+  numbers: defineTable({
+    value: v.number(),
+  }),
 });

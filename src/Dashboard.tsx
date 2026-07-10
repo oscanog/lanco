@@ -10,6 +10,7 @@ const quotes = [
 ];
 
 export default function Dashboard() {
+  // @ts-ignore - Will resolve once convex dev generates backend types
   const me = useQuery(api.users.getMe);
   
   if (me === undefined) {

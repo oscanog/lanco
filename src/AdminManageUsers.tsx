@@ -1,9 +1,9 @@
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { ArrowLeft, UserPlus } from "lucide-react";
-import { useState } from "react";
 
 export default function AdminManageUsers() {
+  // @ts-ignore - Will resolve once convex dev binds the new users.ts
   const users = useQuery(api.users.listUsers);
   
   if (users === undefined) {
@@ -37,7 +37,7 @@ export default function AdminManageUsers() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {users.map((u) => (
+              {users.map((u: any) => (
                 <tr key={u._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
                   <td className="px-6 py-4 font-medium">{u.email || "No email"}</td>
                   <td className="px-6 py-4">
