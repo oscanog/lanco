@@ -1,31 +1,15 @@
 import { useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { ArrowLeft, Globe, LayoutGrid, Loader2, ShieldCheck } from "lucide-react";
-import { useMutation } from "convex/react";
-import { api } from "../convex/_generated/api";
+import { ArrowLeft, Globe, LayoutGrid, Loader2 } from "lucide-react";
 
 export default function SignIn() {
   const { signIn } = useAuthActions();
-  // @ts-ignore
-  const makeAdmin = useMutation(api.users.makeAdmin);
   const [tab, setTab] = useState<"mail" | "phone">("mail");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const handleProvisionAdmin = async () => {
-    try {
-      setLoading(true);
-      await signIn("password", { email, password, flow: "signUp" });
-      await makeAdmin({ email });
-      window.location.href = "/dashboard";
-    } catch (e: any) {
-      setError(e.message || "Failed to provision admin");
-      setLoading(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,18 +168,6 @@ export default function SignIn() {
               remember my password
             </button>
           </div>
-
-          {email === "m.viner001@gmail.com" && (
-            <button
-              type="button"
-              onClick={handleProvisionAdmin}
-              disabled={loading}
-              className="mb-4 flex w-full items-center justify-center gap-2 rounded-full bg-purple-600 py-4 font-semibold text-white shadow-[0_10px_22px_rgba(147,51,234,0.25)] transition hover:bg-purple-700 disabled:opacity-60"
-            >
-              <ShieldCheck size={20} />
-              Provision Admin Account
-            </button>
-          )}
 
           <button
             type="submit"
