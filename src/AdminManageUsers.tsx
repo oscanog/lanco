@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
@@ -143,11 +143,11 @@ export default function AdminManageUsers() {
     if (!resetPassword.trim() || resetPassword.length < 8) { addToast("Password must be at least 8 characters.", "error"); return; }
     setResetting(true);
     try {
-      await adminResetPassword({ email: selectedUser.email, newPassword: resetPassword });
+      await adminResetPassword({ email: selectedUser.email!, newPassword: resetPassword });
       addToast(`Password for "${selectedUser.email}" reset successfully!`, "success");
       
       // Also open success copy modal for the reset password
-      setSuccessGenerated({ email: selectedUser.email, pw: resetPassword });
+      setSuccessGenerated({ email: selectedUser.email!, pw: resetPassword });
       setHasCopiedGenerated(false);
       
       setResetModal(false);
@@ -340,17 +340,17 @@ export default function AdminManageUsers() {
                 <div className="grid grid-cols-2 gap-4">
                    <div>
                      <span className="text-gray-500 dark:text-gray-400 text-sm font-semibold mb-2 block">ID Card Front</span>
-                     {selectedUser.advancedCertification.idCardFrontUrl && (
-                        <a href={selectedUser.advancedCertification.idCardFrontUrl} target="_blank" rel="noreferrer">
-                          <img src={selectedUser.advancedCertification.idCardFrontUrl} className="w-full rounded-lg border border-gray-200 dark:border-gray-700 object-cover aspect-video hover:opacity-80 transition" alt="ID Front" />
+                     {(selectedUser.advancedCertification as any).idCardFrontUrl && (
+                        <a href={(selectedUser.advancedCertification as any).idCardFrontUrl} target="_blank" rel="noreferrer">
+                          <img src={(selectedUser.advancedCertification as any).idCardFrontUrl} className="w-full rounded-lg border border-gray-200 dark:border-gray-700 object-cover aspect-video hover:opacity-80 transition" alt="ID Front" />
                         </a>
                      )}
                    </div>
                    <div>
                      <span className="text-gray-500 dark:text-gray-400 text-sm font-semibold mb-2 block">Holding ID</span>
-                     {selectedUser.advancedCertification.holdingIdUrl && (
-                        <a href={selectedUser.advancedCertification.holdingIdUrl} target="_blank" rel="noreferrer">
-                          <img src={selectedUser.advancedCertification.holdingIdUrl} className="w-full rounded-lg border border-gray-200 dark:border-gray-700 object-cover aspect-[3/4] hover:opacity-80 transition" alt="Holding ID" />
+                     {(selectedUser.advancedCertification as any).holdingIdUrl && (
+                        <a href={(selectedUser.advancedCertification as any).holdingIdUrl} target="_blank" rel="noreferrer">
+                          <img src={(selectedUser.advancedCertification as any).holdingIdUrl} className="w-full rounded-lg border border-gray-200 dark:border-gray-700 object-cover aspect-[3/4] hover:opacity-80 transition" alt="Holding ID" />
                         </a>
                      )}
                    </div>

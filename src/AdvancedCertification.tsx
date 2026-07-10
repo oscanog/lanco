@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ArrowLeft, Loader2, Plus, X, ImageIcon, CheckCircle, AlertCircle } from "lucide-react";
+import { ArrowLeft, Loader2, X, ImageIcon, CheckCircle, AlertCircle } from "lucide-react";
 import { useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 
