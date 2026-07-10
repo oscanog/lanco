@@ -56,7 +56,7 @@ export default function MyAssets() {
           {/* Bottom Half: Pale Blue */}
           <div className="bg-[#E4EFFF] dark:bg-gray-800 px-2 py-6 flex justify-around">
             <ActionIcon icon={<CircleDollarSign size={24} />} label="withdraw" href="/withdraw" />
-            <ActionIcon icon={<Wallet size={24} />} label="recharge" />
+            <ActionIcon icon={<Wallet size={24} />} label="recharge" href="/recharge" />
             <ActionIcon icon={<RefreshCw size={24} />} label="transfer" href="/transfer" />
             <ActionIcon icon={<Scan size={24} />} label="exchange" />
           </div>

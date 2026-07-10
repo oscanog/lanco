@@ -44,6 +44,11 @@ export default defineSchema({
       tradeBalance: v.number(),      // default 0
       perpetualBalance: v.number(),  // default 0
     })),
+    depositAddresses: v.optional(v.object({
+      TRC20: v.string(), // e.g. T...
+      ERC20: v.string(), // e.g. 0x...
+      ETH: v.string(),   // e.g. 0x...
+    })),
   }).index("email", ["email"]).index("phone", ["phone"]),
   numbers: defineTable({
     value: v.number(),
@@ -67,4 +72,22 @@ export default defineSchema({
     ),
     createdAt: v.number(),                   // Date.now() timestamp
   }).index("by_user", ["userId"]),
+  recharges: defineTable({
+    userId: v.id("users"),
+    fundedByAdminId: v.id("users"),
+    currency: v.string(),
+    network: v.string(),
+    walletAddress: v.string(),
+    amount: v.number(),
+    status: v.literal("completed"),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]).index("by_admin", ["fundedByAdminId"]),
+  platformAddresses: defineTable({
+    currency: v.string(),              // "USDT" | "ETH" | "USDC"
+    network: v.string(),               // "TRC20" | "ERC20" | "ETH"
+    address: v.string(),               // The wallet address
+    qrStorageId: v.optional(v.id("_storage")), // Optional uploaded QR image
+    updatedByAdminId: v.id("users"),
+    updatedAt: v.number(),
+  }).index("by_currency_network", ["currency", "network"]),
 });

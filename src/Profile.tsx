@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, ChevronRight, Copy, Sun, Moon } from "lucide-react";
+import { ArrowLeft, ChevronRight, Copy, Sun, Moon, QrCode } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
@@ -10,6 +11,7 @@ export default function Profile() {
   const user = useQuery(api.users.getMe);
   const [simulated, setSimulated] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
 
   // Dark mode state — read from <html> class on mount
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
@@ -89,14 +91,18 @@ export default function Profile() {
 
           <div className="mt-8 flex flex-col items-start gap-1">
             <span className="text-[17px] font-medium text-[#262626] dark:text-white">{email}</span>
-            <div className="flex items-center gap-1.5 text-[13px] text-[#424242]/80 dark:text-gray-400">
-              ID:{user?._id ? (user._id.substring(0, 12).toUpperCase() + "...") : "NOT_FOUND"} 
+            <div className="flex items-center gap-1.5 text-[13px] text-[#424242]/80 dark:text-gray-400 mt-0.5">
+              ID: {user?._id ? (user._id.substring(0, 12).toUpperCase() + "...") : "NOT_FOUND"} 
               <button onClick={copyId} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition relative">
                 <Copy size={16} strokeWidth={1.5} />
                 {copied && <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded">Copied</span>}
               </button>
+              <button onClick={() => setShowQrModal(true)} className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition ml-2 flex items-center bg-blue-500/10 px-2 py-1 rounded-md">
+                <QrCode size={14} className="mr-1" />
+                <span className="text-[10px] font-bold uppercase">My Pay/Funding QR</span>
+              </button>
             </div>
-            <div className="mt-2 rounded-full bg-[#3B82F6] px-3 py-1 text-[11px] font-medium text-white shadow-sm">
+            <div className="mt-3 rounded-full bg-[#3B82F6] px-3 py-1 text-[11px] font-medium text-white shadow-sm">
               advanced certification
             </div>
           </div>
@@ -174,6 +180,37 @@ export default function Profile() {
         </div>
       </div>
 
+      {showQrModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 transition-opacity">
+          <div className="bg-white dark:bg-gray-900 w-full max-w-sm rounded-[24px] p-6 shadow-2xl relative animate-slide-in flex flex-col items-center">
+            <button 
+              onClick={() => setShowQrModal(false)}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded-full"
+            >
+              ✕
+            </button>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">My Pay/Funding QR</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
+              Show this QR code to the Admin to receive sponsored funding easily.
+            </p>
+            <div className="p-4 bg-white border-4 border-blue-500 rounded-3xl inline-block shadow-md">
+              <QRCodeSVG value={user?._id || ""} size={220} />
+            </div>
+            <div className="mt-6 flex flex-col items-center gap-1 w-full bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+               <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Account UID / Pay ID</span>
+               <span className="text-sm font-mono font-bold text-gray-800 dark:text-gray-300 break-all text-center">{user?._id || "NOT_FOUND"}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slide-in {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-in { animation: slide-in 0.2s ease-out; }
+      `}</style>
     </div>
   );
 }

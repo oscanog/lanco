@@ -17,6 +17,12 @@ import Transfer from "./Transfer.tsx";
 import WithdrawalRecords from "./WithdrawalRecords.tsx";
 import SecurityCenter from "./SecurityCenter.tsx";
 import FundPassword from "./FundPassword.tsx";
+import Recharge from "./Recharge.tsx";
+import RechargeDetails from "./RechargeDetails.tsx";
+import RechargeRecords from "./RechargeRecords.tsx";
+import AdminDeposit from "./AdminDeposit.tsx";
+import AdminDepositLogs from "./AdminDepositLogs.tsx";
+import AdminWalletConfig from "./AdminWalletConfig.tsx";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
@@ -42,6 +48,12 @@ function Router() {
   if (path === "/withdrawal-records") return <WithdrawalRecords />;
   if (path === "/security-center") return <SecurityCenter />;
   if (path === "/fund-password") return <FundPassword />;
+  if (path === "/recharge") return <Recharge />;
+  if (path === "/recharge-records") return <RechargeRecords />;
+  if (path.startsWith("/recharge/")) return <RechargeDetails />;
+  if (path === "/admin/deposit") return <AdminDeposit />;
+  if (path === "/admin/deposit-logs") return <AdminDepositLogs />;
+  if (path === "/admin/wallet-config") return <AdminWalletConfig />;
 
   return <App />;
 }

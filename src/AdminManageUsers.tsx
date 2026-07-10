@@ -455,10 +455,16 @@ export default function AdminManageUsers() {
                   <div className="text-sm text-gray-500 dark:text-gray-400">ID: {selectedUser._id}</div>
                   <div className="text-sm text-purple-600 dark:text-purple-400 font-bold uppercase mt-1">{selectedUser.role || "USER"}</div>
                </div>
-               <button onClick={() => { setResetPassword(""); setResetModal(true); }} className="flex flex-col items-center gap-1 text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 px-3 py-2 rounded-lg transition">
-                  <KeySquare size={18} />
-                  <span className="text-xs font-bold">Reset Password</span>
-               </button>
+               <div className="flex gap-2">
+                  <a href={`/admin/deposit?userId=${selectedUser._id}`} className="flex flex-col items-center justify-center gap-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 px-3 py-2 rounded-lg transition">
+                     <span className="text-xl font-bold font-mono">₮</span>
+                     <span className="text-xs font-bold whitespace-nowrap">Deposit</span>
+                  </a>
+                  <button onClick={() => { setResetPassword(""); setResetModal(true); }} className="flex flex-col items-center justify-center gap-1 text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 px-3 py-2 rounded-lg transition">
+                     <KeySquare size={18} />
+                     <span className="text-xs font-bold whitespace-nowrap">Reset Pw</span>
+                  </button>
+               </div>
             </div>
 
             {/* Junior Cert */}
@@ -577,16 +583,23 @@ export default function AdminManageUsers() {
       <div className="mb-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">Platform Settings</h3>
-           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Configure the global primary display currency.</p>
+           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Configure the global primary display currency and deposit wallets.</p>
         </div>
-        <div className="relative w-full md:w-64" ref={currencyRef}>
-          <div 
-            onClick={() => setIsCurrencyOpen(!isCurrencyOpen)}
-            className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white text-sm font-semibold rounded-xl pl-4 pr-4 py-2.5 outline-none cursor-pointer hover:border-[#229799] dark:hover:border-[#48CFCB] transition"
+        <div className="flex flex-col sm:flex-row gap-3 items-center w-full md:w-auto">
+          <a 
+            href="/admin/wallet-config" 
+            className="w-full sm:w-auto text-center bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm transition text-sm whitespace-nowrap"
           >
-            {settings?.displayCurrency || "USD"}
-            <ArrowUpDown size={14} className="text-gray-400" />
-          </div>
+            Configure Deposit Wallets
+          </a>
+          <div className="relative w-full md:w-48" ref={currencyRef}>
+            <div 
+              onClick={() => setIsCurrencyOpen(!isCurrencyOpen)}
+              className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white text-sm font-semibold rounded-xl pl-4 pr-4 py-2.5 outline-none cursor-pointer hover:border-[#229799] dark:hover:border-[#48CFCB] transition"
+            >
+              {settings?.displayCurrency || "USD"}
+              <ArrowUpDown size={14} className="text-gray-400" />
+            </div>
 
           {isCurrencyOpen && (
             <div className="absolute top-full right-0 left-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden flex flex-col max-h-[300px] animate-slide-in">
@@ -624,6 +637,7 @@ export default function AdminManageUsers() {
               </div>
             </div>
           )}
+          </div>
         </div>
       </div>
 
