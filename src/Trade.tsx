@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
-import { Home, Zap, Repeat, Wallet, Users, X, AlertTriangle, CheckCircle } from "lucide-react";
+import { Zap, Home, Repeat, Users, Wallet, ArrowLeft, X, AlertTriangle, CheckCircle } from "lucide-react";
 
 // ─── Types ───
 interface Candle {
@@ -342,7 +342,7 @@ export default function Trade() {
       settleCopyTrades().catch(() => {});
     }, 5000);
     return () => clearInterval(timer);
-  }, [settleExpired]);
+  }, [settleExpired, settleCopyTrades]);
 
   const tradeBalance = wallets?.tradeBalance ?? 0;
   const amount = parseFloat(amountStr) || 0;
@@ -378,7 +378,8 @@ export default function Trade() {
   const handleRedeem = async () => {
     if (!orderCode.trim()) return;
     try {
-      const result = await redeemCode({ code: orderCode.trim() });
+      const currentChartDirection = putPct > callPct ? "PUT" : "CALL";
+      const result = await redeemCode({ code: orderCode.trim(), currentChartDirection });
       setConfirmModal({
         followId: result.followId as string,
         orderAmount: result.orderAmount,
@@ -412,7 +413,27 @@ export default function Trade() {
   };
 
   const pendingOrders = (orders || []).filter((o) => o.status === "pending");
-  const completedOrders = (orders || []).filter((o) => o.status === "completed");
+  const completedDelivery = (orders || []).filter((o) => o.status === "completed");
+  const completedCopy = (copyHistory || [])
+    .filter((c) => {
+      const endOfDay = historyDateTo + (24 * 60 * 60 * 1000 - 1);
+      return c.status === "settled" && c.createdAt >= historyDateFrom && c.createdAt <= endOfDay;
+    })
+    .map((c) => ({
+      _id: c._id,
+      direction: c.direction,
+      status: "completed",
+      profitAndLoss: c.earnedInterest,
+      rateOfReturn: c.interestRateSnapshot,
+      amount: c.orderAmount,
+      symbol: c.symbol,
+      durationSeconds: c.durationSeconds,
+      createdAt: c.createdAt,
+      settlesAt: c.codeExpiresAt || c.createdAt,
+      openingPrice: undefined,
+      settlementPrice: undefined,
+    }));
+  const completedOrders = [...completedDelivery, ...completedCopy].sort((a, b) => b.createdAt - a.createdAt);
 
   const formatPrice = (p: number) => p.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -716,51 +737,20 @@ export default function Trade() {
                     }
                     return null;
                   })()}
-                </>
-              )}
-
-              {invitedMeSub === "copying" && (
-                <>
-                  {(copyHistory || []).length === 0 ? (
-                    <EmptyState />
-                  ) : (
-                    (copyHistory || []).map((f) => (
-                      <div
-                        key={f._id}
-                        className="mb-3 p-4 border border-gray-100 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800"
-                      >
-                        <div className="flex justify-between items-center mb-2">
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                            f.direction === "CALL" ? "text-green-600 bg-green-50" : "text-red-600 bg-red-50"
-                          }`}>
-                            {f.direction}
-                          </span>
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded ${
-                            f.status === "settled" ? "text-green-600 bg-green-50" : 
-                            f.status === "confirmed" ? "text-blue-600 bg-blue-50" : "text-yellow-600 bg-yellow-50"
-                          }`}>
-                            {f.status}
-                          </span>
-                        </div>
-                        <Row label="code" value={f.code} />
-                        <Row label="order amount" value={f.orderAmount.toFixed(2)} />
-                        <Row label="earned interest" value={f.earnedInterest.toFixed(2)} isGreen />
-                        <Row label="total asset basis" value={f.totalAssetSnapshot.toFixed(2)} />
-                        <Row label="rate" value={`${(f.interestRateSnapshot * 100).toFixed(2)}%`} />
-                        <Row
-                          label="time"
-                          value={new Date(f.createdAt).toLocaleString()}
-                        />
-                      </div>
-                    ))
+                  {(copyHistory || []).length === 0 && (
+                    <div className="mt-4">
+                      <EmptyState />
+                    </div>
                   )}
                 </>
               )}
 
-              {invitedMeSub === "initiate" && (copyHistory || []).length === 0 && (
-                <div className="mt-4">
-                  <EmptyState />
-                </div>
+              {/* Full Screen Copying History overlay when active */}
+              {invitedMeSub === "copying" && (
+                <CopyingHistoryScreen 
+                   history={copyHistory || []} 
+                   onClose={() => setInvitedMeSub("initiate")} 
+                />
               )}
             </>
           )}
@@ -831,59 +821,75 @@ function OrderCard({ order }: { order: any }) {
   const isCompleted = order.status === "completed";
   const isWin = isCompleted && order.profitAndLoss > 0;
 
+  const formatTime = (ts: number | undefined) => {
+    if (!ts) return "";
+    const d = new Date(ts);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+
+  const periodStr = isCompleted 
+    ? (order.periodStart && order.periodEnd 
+        ? `${order.periodStart} ~ ${order.periodEnd}` 
+        : `${formatTime(order.createdAt)} ~ ${formatTime(order.settlesAt || order.createdAt + order.durationSeconds * 1000)}`) 
+    : "--";
+
+  let orderTimeStr = "--";
+  if (isCompleted && order.createdAt) {
+    const d = new Date(order.createdAt);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    const s = String(d.getSeconds()).padStart(2, '0');
+    orderTimeStr = `${y}-${m}-${day} ${h}:${min}:${s}`;
+  }
+
   return (
-    <div className="mb-3 p-4 border border-gray-100 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800">
+    <div className="mb-4 p-[18px] border border-gray-400 dark:border-gray-600 rounded-[28px] bg-white dark:bg-gray-800 relative z-10">
       {!isCompleted && (
         <div className="text-gray-700 dark:text-gray-300 font-bold mb-2">??? ??? ???</div>
       )}
-      <div className="flex items-center gap-2 mb-3">
-        <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-          isCall ? "text-green-600 bg-green-50" : "text-red-600 bg-red-50"
+      
+      {/* Header */}
+      <div className="flex items-baseline gap-1.5 mb-4">
+        <span className={`text-[15px] tracking-wide font-bold ${
+          isCall ? "text-[#4CAF50]" : "text-[#F44336]"
         }`}>
           {order.direction}
         </span>
-        <span className="text-sm font-semibold text-gray-800 dark:text-white">
+        <span className="text-[17px] font-bold text-gray-900 dark:text-white">
           {order.symbol?.replace("/", "") || "BTCUSDT"}
         </span>
-        <span className="text-xs text-gray-400">{order.durationSeconds}s</span>
+        <span className="text-[13px] font-semibold text-gray-400 dark:text-gray-400 ml-1">
+          {order.durationSeconds}s
+        </span>
       </div>
-      <Row label="time period" value={isCompleted ? `${order.periodStart} ~ ${order.periodEnd}` : "--"} />
-      {isCompleted && (
+
+      <div className="flex flex-col space-y-[9px] px-0.5">
+        <Row label="time period" value={periodStr} />
+        {isCompleted && (
+          <Row
+            label="profit and loss"
+            value={(order.profitAndLoss ?? 0).toFixed(2)}
+            isGreen={isWin}
+            isRed={!isWin && order.profitAndLoss < 0}
+          />
+        )}
         <Row
-          label="profit and loss"
-          value={(order.profitAndLoss ?? 0).toFixed(2)}
+          label="rate of return"
+          value={isCompleted ? `${((order.rateOfReturn ?? 0) * 100).toFixed(2)}%` : "--"}
           isGreen={isWin}
-          isRed={!isWin}
+          isRed={isCompleted && !isWin}
         />
-      )}
-      <Row
-        label="rate of return"
-        value={isCompleted ? `${((order.rateOfReturn ?? 0) * 100).toFixed(2)}%` : "--%"}
-        isGreen={isWin}
-        isRed={isCompleted && !isWin}
-      />
-      <Row label="order quantity" value={(order.amount ?? 0).toFixed(2)} />
-      {isCompleted && (
-        <Row label="the number of transactions" value={(order.amount ?? 0).toFixed(2)} />
-      )}
-      <Row label="opening price" value={isCompleted ? (order.openingPrice ?? 0).toFixed(2) : "--"} />
-      <Row label="settlement price" value={isCompleted ? (order.settlementPrice ?? 0).toFixed(2) : "--"} />
-      <Row
-        label="order time"
-        value={
-          isCompleted
-            ? new Date(order.createdAt).toLocaleString("en-CA", {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-                hour12: false,
-              })
-            : "--"
-        }
-      />
+        <Row label="order quantity" value={order.amount ? (order.amount).toFixed(2) : "--"} />
+        {isCompleted && (
+          <Row label="the number of transactions" value={order.amount ? (order.amount).toFixed(2) : "--"} />
+        )}
+        <Row label="opening price" value={isCompleted ? (order.openingPrice ?? 0).toFixed(2) : "--"} />
+        <Row label="settlement price" value={isCompleted ? (order.settlementPrice ?? 0).toFixed(2) : "--"} />
+        <Row label="order time" value={orderTimeStr} />
+      </div>
     </div>
   );
 }
@@ -917,11 +923,11 @@ function Row({
   isRed?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-gray-50 dark:border-gray-800 last:border-0 last:pb-0">
-      <span className="text-xs text-gray-500">{label}</span>
+    <div className="flex items-center justify-between">
+      <span className="text-[13px] font-semibold text-gray-800 dark:text-gray-300">{label}</span>
       <span
-        className={`text-sm font-medium ${
-          isGreen ? "text-green-500" : isRed ? "text-red-500" : "text-gray-800 dark:text-white"
+        className={`text-[13px] font-bold ${
+          isGreen ? "text-[#4CAF50]" : isRed ? "text-[#F44336]" : "text-gray-400 dark:text-gray-400 font-medium"
         }`}
       >
         {value}
@@ -959,5 +965,111 @@ function NavItem({
         {label}
       </span>
     </a>
+  );
+}
+
+// ─── Copying History Screen Components ───
+
+function CopyingHistoryScreen({ history, onClose }: { history: any[], onClose: () => void }) {
+  const settled = history.filter(h => h.status === "settled");
+  
+  const totalAmount = history.reduce((sum, h) => sum + h.orderAmount, 0);
+  const totalProfit = settled.reduce((sum, h) => sum + h.earnedInterest, 0);
+  
+  const totalFollows = history.length;
+  // Winning rate: In this context, everything that settles earns interest. We just say 100.00% or based on real loss.
+  const winCount = settled.filter(s => s.earnedInterest > 0).length;
+  const winRate = settled.length > 0 ? ((winCount / settled.length) * 100).toFixed(2) : "0.00";
+
+  return (
+    <div className="fixed inset-0 z-50 bg-gray-50 dark:bg-gray-900 pb-safe overflow-y-auto hidden-scrollbar flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-4 bg-white dark:bg-gray-900 z-10 sticky top-0 shadow-sm border-b-transparent dark:border-gray-800">
+        <button onClick={onClose} className="p-1">
+          <ArrowLeft size={24} className="text-black dark:text-white" />
+        </button>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white mt-1 absolute left-1/2 -translate-x-1/2">Copying history</h2>
+        <div className="w-8" />
+      </div>
+
+      <div className="p-4 space-y-4 flex-1">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-2">
+          <StatBox value={totalAmount.toFixed(2)} label="The total amount of the order(USDT)" />
+          <StatBox value={totalFollows.toString()} label="Number of times to follow orders" />
+          <StatBox value={totalProfit.toFixed(2)} label="Profit from following orders" />
+          <StatBox value={`${winRate}%`} label="winning rate" />
+        </div>
+
+        {/* Card List */}
+        {history.sort((a,b) => b.createdAt - a.createdAt).map(f => (
+          <CopyHistoryCard key={f._id} follow={f} />
+        ))}
+
+        {history.length === 0 && (
+          <div className="py-12">
+            <EmptyState />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatBox({ value, label }: { value: string, label: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center p-3 border border-blue-400 dark:border-blue-500 rounded-[22px] text-center bg-white dark:bg-gray-800 shadow-sm min-h-[96px]">
+      <span className="text-lg font-bold text-gray-900 dark:text-white mb-0.5">{value}</span>
+      <span className="text-[11px] font-medium text-gray-400 leading-tight w-[90%] mx-auto">{label}</span>
+    </div>
+  );
+}
+
+function CopyHistoryCard({ follow }: { follow: any }) {
+  const formatFullDate = (ts: number | undefined) => {
+    if (!ts) return "--";
+    const d = new Date(ts);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    const s = String(d.getSeconds()).padStart(2, '0');
+    return `${y}-${m}-${day} ${h}:${min}:${s}`;
+  };
+
+  return (
+    <div className="mb-4 p-[18px] border border-gray-400 dark:border-gray-600 rounded-[28px] bg-white dark:bg-gray-800 shadow-sm">
+      <div className="flex flex-col mb-[12px]">
+        <div className="flex justify-between items-start mb-0.5">
+          <span className="text-[13px] font-semibold text-gray-400 dark:text-gray-500 shrink-0 mt-0.5 mr-4">Title</span>
+          <span className="text-[13px] font-bold text-gray-800 dark:text-gray-200 text-right leading-[1.35]">
+            {follow.title}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex flex-col space-y-[9px] px-0.5">
+        <CopyRow label="Trading pair" value={follow.symbol} />
+        <CopyRow label="Direction" value={follow.direction} />
+        <CopyRow label="Purchase duration" value={`${follow.durationSeconds}s`} />
+        
+        <CopyRow label="Order time" value={formatFullDate(follow.createdAt)} />
+        <CopyRow label="Release time" value={formatFullDate(follow.codeCreatedAt)} />
+        <CopyRow label="Order amount" value={follow.orderAmount.toFixed(2)} />
+        <CopyRow label="profit and loss" value={follow.earnedInterest.toFixed(2)} />
+      </div>
+    </div>
+  );
+}
+
+function CopyRow({ label, value }: { label: string, value: string | number }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-[13px] font-semibold text-gray-400 dark:text-gray-500">{label}</span>
+      <span className="text-[13px] font-bold text-gray-800 dark:text-gray-200">
+        {value}
+      </span>
+    </div>
   );
 }

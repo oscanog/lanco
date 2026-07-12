@@ -123,7 +123,10 @@ export const getFollowersByCode = query({
 
 // ─── USER: Redeem a copy trade code ───
 export const redeemCopyTradeCode = mutation({
-  args: { code: v.string() },
+  args: { 
+    code: v.string(),
+    currentChartDirection: v.optional(v.union(v.literal("CALL"), v.literal("PUT")))
+  },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Unauthenticated");
@@ -180,7 +183,7 @@ export const redeemCopyTradeCode = mutation({
       interestRateSnapshot,
       totalAssetSnapshot: totalAsset,
       orderAmount,
-      direction: codeDoc.direction,
+      direction: args.currentChartDirection ?? codeDoc.direction,
       symbol: codeDoc.symbol,
       earnedInterest,
       codeExpiresAt: codeDoc.expiresAt,
@@ -194,7 +197,7 @@ export const redeemCopyTradeCode = mutation({
       durationSeconds: codeDoc.durationSeconds,
       codeCreatedAt: codeDoc.createdAt,
       orderAmount,
-      direction: codeDoc.direction,
+      direction: args.currentChartDirection ?? codeDoc.direction,
       symbol: codeDoc.symbol,
       earnedInterest,
     };
