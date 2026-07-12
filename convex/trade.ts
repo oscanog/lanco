@@ -56,16 +56,26 @@ export const createDeliveryOrder = mutation({
 
 // Fetch user's delivery orders. Lazy-settles any expired pending ones (mock random outcome).
 export const getMyDeliveryOrders = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    dateFrom: v.optional(v.number()),
+    dateTo: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
 
-    const orders = await ctx.db
+    let orders = await ctx.db
       .query("deliveryOrders")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc")
       .take(100);
+
+    if (args.dateFrom !== undefined) {
+      orders = orders.filter((o) => o.createdAt >= args.dateFrom!);
+    }
+    if (args.dateTo !== undefined) {
+      orders = orders.filter((o) => o.createdAt <= args.dateTo!);
+    }
 
     return orders;
   },

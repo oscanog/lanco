@@ -9,10 +9,10 @@ export default function AdminCopyTrade() {
   const codes = useQuery(api.copyTrade.getMyGeneratedCodes);
   const generateCode = useMutation(api.copyTrade.generateCopyTradeCode);
 
+  const [title, setTitle] = useState("");
   const [symbol] = useState("BTCUSDT");
   const [direction, setDirection] = useState<"CALL" | "PUT">("CALL");
   const [duration, setDuration] = useState(60);
-  const [orderAmount, setOrderAmount] = useState("12.68");
   const [interestRate, setInterestRate] = useState("0.4");
   const [generatedCode, setGeneratedCode] = useState("");
   const [copied, setCopied] = useState(false);
@@ -30,7 +30,7 @@ export default function AdminCopyTrade() {
     setGeneratedCode("");
     try {
       const code = await generateCode({
-        orderAmount: parseFloat(orderAmount) || 0,
+        title,
         direction,
         symbol,
         durationSeconds: duration,
@@ -73,6 +73,16 @@ export default function AdminCopyTrade() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <h2 className="text-base font-bold text-gray-900 dark:text-white mb-4">Generate New Code</h2>
 
+          {/* Title */}
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Title</label>
+          <input
+            type="text"
+            placeholder="e.g. Fidelity Capital Investment Group..."
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-sm mb-3 outline-none focus:border-[#1860F5]"
+          />
+
           {/* Symbol (read-only) */}
           <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Symbol</label>
           <div className="bg-gray-50 dark:bg-gray-700 rounded-xl px-4 py-3 mb-3 text-sm font-semibold">{symbol}</div>
@@ -113,15 +123,6 @@ export default function AdminCopyTrade() {
             <option value={120}>120s</option>
             <option value={300}>300s</option>
           </select>
-
-          {/* Order amount */}
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Order Amount (USDT)</label>
-          <input
-            type="number"
-            value={orderAmount}
-            onChange={(e) => setOrderAmount(e.target.value)}
-            className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-sm mb-3 outline-none focus:border-[#1860F5]"
-          />
 
           {/* Interest rate */}
           <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Interest Rate (%)</label>
@@ -180,14 +181,16 @@ export default function AdminCopyTrade() {
                   className="w-full text-left p-4 border border-gray-100 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-mono font-bold text-sm tracking-wide">{c.code}</span>
+                    <div>
+                      <div className="font-mono font-bold text-sm tracking-wide">{c.code}</div>
+                      {c.title && <div className="text-xs text-gray-500 mt-0.5">{c.title}</div>}
+                    </div>
                     <StatusBadge status={c.effectiveStatus} />
                   </div>
                   <div className="flex items-center gap-4 text-xs text-gray-400">
                     <span className={c.direction === "CALL" ? "text-green-500 font-bold" : "text-red-500 font-bold"}>
                       {c.direction}
                     </span>
-                    <span>{c.orderAmount} USDT</span>
                     <span>{(c.interestRate * 100).toFixed(2)}%</span>
                     <span>{c.durationSeconds}s</span>
                     <span className="flex items-center gap-1">

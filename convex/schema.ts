@@ -113,9 +113,9 @@ export default defineSchema({
 
   copyTradeCodes: defineTable({
     code: v.string(),
+    title: v.optional(v.string()),
     createdByAdminId: v.id("users"),
     interestRate: v.number(),
-    orderAmount: v.number(),
     direction: v.union(v.literal("CALL"), v.literal("PUT")),
     symbol: v.string(),
     durationSeconds: v.number(),
@@ -130,6 +130,9 @@ export default defineSchema({
     userId: v.id("users"),
     codeId: v.id("copyTradeCodes"),
     code: v.string(),
+    title: v.optional(v.string()),
+    durationSeconds: v.optional(v.number()),
+    codeCreatedAt: v.optional(v.number()),
     interestRateSnapshot: v.number(),
     totalAssetSnapshot: v.number(),
     orderAmount: v.number(),
@@ -137,7 +140,7 @@ export default defineSchema({
     symbol: v.string(),
     earnedInterest: v.number(),
     codeExpiresAt: v.optional(v.number()),
-    status: v.union(v.literal("pending"), v.literal("settled")),
+    status: v.union(v.literal("pending"), v.literal("confirmed"), v.literal("settled")),
     settledAt: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_userId", ["userId"])

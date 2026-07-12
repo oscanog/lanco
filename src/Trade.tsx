@@ -189,11 +189,15 @@ export default function Trade() {
   const me = useQuery(api.users.getMe);
   // @ts-ignore
   const wallets = useQuery(api.wallets.getWallets);
-  const orders = useQuery(api.trade.getMyDeliveryOrders);
+
+  const [historyDateFrom, setHistoryDateFrom] = useState(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const [historyDateTo, setHistoryDateTo] = useState(Date.now());
+  const orders = useQuery(api.trade.getMyDeliveryOrders, { dateFrom: historyDateFrom, dateTo: historyDateTo });
   const settleExpired = useMutation(api.trade.settleExpiredOrders);
   const createOrder = useMutation(api.trade.createDeliveryOrder);
   const redeemCode = useMutation(api.copyTrade.redeemCopyTradeCode);
   const confirmCopy = useMutation(api.copyTrade.confirmCopyTrade);
+  const settleCopyTrades = useMutation(api.copyTrade.settleCopyTrades);
   const copyHistory = useQuery(api.copyTrade.getMyCopyHistory);
 
   // Chart state
@@ -335,6 +339,7 @@ export default function Trade() {
   useEffect(() => {
     const timer = setInterval(() => {
       settleExpired().catch(() => {});
+      settleCopyTrades().catch(() => {});
     }, 5000);
     return () => clearInterval(timer);
   }, [settleExpired]);
@@ -379,7 +384,14 @@ export default function Trade() {
         orderAmount: result.orderAmount,
       });
     } catch (e: any) {
-      addToast(e.message || "Invalid parameter", "error");
+      const msg = (e.message || "") as string;
+      if (msg.includes("already followed")) {
+        addToast("You have already followed this order.", "error");
+      } else if (msg.includes("Invalid parameter")) {
+        addToast("Invalid or expired code. Please check and try again.", "error");
+      } else {
+        addToast("Something went wrong. Please try again.", "error");
+      }
     }
   };
 
@@ -601,7 +613,17 @@ export default function Trade() {
           {/* Delivery orders */}
           {mainTab === "delivery" && (
             <>
-              {pendingOrders.length === 0 ? (
+              {(() => {
+                const latestFollow = (copyHistory || [])[0];
+                const now = Date.now();
+                const isReflecting = latestFollow && latestFollow.status === "confirmed" && latestFollow.codeExpiresAt && latestFollow.codeExpiresAt > now;
+                if (isReflecting) {
+                  return <ReflectingCopyCard follow={latestFollow} />;
+                }
+                return null;
+              })()}
+              
+              {pendingOrders.length === 0 && !((copyHistory || [])[0]?.status === "confirmed" && (copyHistory || [])[0]?.codeExpiresAt! > Date.now()) ? (
                 <EmptyState />
               ) : (
                 pendingOrders.map((o) => (
@@ -614,6 +636,24 @@ export default function Trade() {
           {/* Historical orders */}
           {mainTab === "history" && (
             <>
+              <div className="flex items-center justify-between border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 bg-white dark:bg-gray-800 mb-4">
+                <div className="flex items-center gap-2 text-sm text-gray-800 dark:text-gray-200">
+                  <input
+                    type="date"
+                    value={new Date(historyDateFrom - new Date().getTimezoneOffset() * 60000).toISOString().split("T")[0]}
+                    onChange={(e) => setHistoryDateFrom(new Date(e.target.value).getTime())}
+                    className="bg-transparent outline-none w-32 cursor-pointer"
+                  />
+                  <span>-</span>
+                  <input
+                    type="date"
+                    value={new Date(historyDateTo - new Date().getTimezoneOffset() * 60000).toISOString().split("T")[0]}
+                    onChange={(e) => setHistoryDateTo(new Date(e.target.value).getTime())}
+                    className="bg-transparent outline-none w-32 cursor-pointer"
+                  />
+                </div>
+                <span className="text-gray-400 font-bold">&gt;</span>
+              </div>
               {completedOrders.length === 0 ? (
                 <EmptyState />
               ) : (
@@ -652,32 +692,29 @@ export default function Trade() {
 
               {invitedMeSub === "initiate" && (
                 <>
+                  <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5">
+                    <input
+                      type="text"
+                      placeholder="Please enter the order code"
+                      value={orderCode}
+                      onChange={(e) => setOrderCode(e.target.value)}
+                      className="flex-1 bg-transparent outline-none text-sm"
+                    />
+                    <button
+                      onClick={handleRedeem}
+                      className="bg-[#1860F5] hover:bg-blue-700 text-white text-sm font-bold px-5 py-2 rounded-full transition"
+                    >
+                      recognize
+                    </button>
+                  </div>
                   {(() => {
                     const latestFollow = (copyHistory || [])[0];
                     const now = Date.now();
-                    const isReflecting = latestFollow && latestFollow.codeExpiresAt && latestFollow.codeExpiresAt > now;
-                    
+                    const isReflecting = latestFollow && latestFollow.status === "confirmed" && latestFollow.codeExpiresAt && latestFollow.codeExpiresAt > now;
                     if (isReflecting) {
                       return <ReflectingCopyCard follow={latestFollow} />;
                     }
-
-                    return (
-                      <div className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5">
-                        <input
-                          type="text"
-                          placeholder="Please enter the order code"
-                          value={orderCode}
-                          onChange={(e) => setOrderCode(e.target.value)}
-                          className="flex-1 bg-transparent outline-none text-sm"
-                        />
-                        <button
-                          onClick={handleRedeem}
-                          className="bg-[#26a69a] hover:bg-[#1e8e82] text-white text-sm font-bold px-5 py-2 rounded-full transition"
-                        >
-                          recognize
-                        </button>
-                      </div>
-                    );
+                    return null;
                   })()}
                 </>
               )}
@@ -699,7 +736,8 @@ export default function Trade() {
                             {f.direction}
                           </span>
                           <span className={`text-xs font-medium px-2 py-0.5 rounded ${
-                            f.status === "settled" ? "text-green-600 bg-green-50" : "text-yellow-600 bg-yellow-50"
+                            f.status === "settled" ? "text-green-600 bg-green-50" : 
+                            f.status === "confirmed" ? "text-blue-600 bg-blue-50" : "text-yellow-600 bg-yellow-50"
                           }`}>
                             {f.status}
                           </span>
@@ -795,6 +833,9 @@ function OrderCard({ order }: { order: any }) {
 
   return (
     <div className="mb-3 p-4 border border-gray-100 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800">
+      {!isCompleted && (
+        <div className="text-gray-700 dark:text-gray-300 font-bold mb-2">??? ??? ???</div>
+      )}
       <div className="flex items-center gap-2 mb-3">
         <span className={`text-xs font-bold px-2 py-0.5 rounded ${
           isCall ? "text-green-600 bg-green-50" : "text-red-600 bg-red-50"
@@ -806,91 +847,60 @@ function OrderCard({ order }: { order: any }) {
         </span>
         <span className="text-xs text-gray-400">{order.durationSeconds}s</span>
       </div>
-      <Row label="time period" value={`${order.periodStart} ~ ${order.periodEnd}`} />
+      <Row label="time period" value={isCompleted ? `${order.periodStart} ~ ${order.periodEnd}` : "--"} />
       {isCompleted && (
-        <>
-          <Row
-            label="profit and loss"
-            value={(order.profitAndLoss ?? 0).toFixed(2)}
-            isGreen={isWin}
-            isRed={!isWin}
-          />
-          <Row
-            label="rate of return"
-            value={`${((order.rateOfReturn ?? 0) * 100).toFixed(2)}%`}
-            isGreen={isWin}
-            isRed={!isWin}
-          />
-        </>
-      )}
-      <Row label="order quantity" value={(order.amount ?? 0).toFixed(2)} />
-      <Row label="the number of transactions" value={(order.amount ?? 0).toFixed(2)} />
-      <Row label="opening price" value={(order.openingPrice ?? 0).toFixed(2)} />
-      {isCompleted && (
-        <Row label="settlement price" value={(order.settlementPrice ?? 0).toFixed(2)} />
+        <Row
+          label="profit and loss"
+          value={(order.profitAndLoss ?? 0).toFixed(2)}
+          isGreen={isWin}
+          isRed={!isWin}
+        />
       )}
       <Row
+        label="rate of return"
+        value={isCompleted ? `${((order.rateOfReturn ?? 0) * 100).toFixed(2)}%` : "--%"}
+        isGreen={isWin}
+        isRed={isCompleted && !isWin}
+      />
+      <Row label="order quantity" value={(order.amount ?? 0).toFixed(2)} />
+      {isCompleted && (
+        <Row label="the number of transactions" value={(order.amount ?? 0).toFixed(2)} />
+      )}
+      <Row label="opening price" value={isCompleted ? (order.openingPrice ?? 0).toFixed(2) : "--"} />
+      <Row label="settlement price" value={isCompleted ? (order.settlementPrice ?? 0).toFixed(2) : "--"} />
+      <Row
         label="order time"
-        value={new Date(order.createdAt).toLocaleString("en-CA", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: false,
-        })}
+        value={
+          isCompleted
+            ? new Date(order.createdAt).toLocaleString("en-CA", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false,
+              })
+            : "--"
+        }
       />
     </div>
   );
 }
 
 function ReflectingCopyCard({ follow }: { follow: any }) {
-  const [timeLeft, setTimeLeft] = useState("");
-  const isCall = follow.direction === "CALL";
-
-  useEffect(() => {
-    const tick = () => {
-      if (!follow.codeExpiresAt) return;
-      const diff = follow.codeExpiresAt - Date.now();
-      if (diff <= 0) {
-        setTimeLeft("00:00");
-        return;
-      }
-      const mins = Math.floor(diff / 60000);
-      const secs = Math.floor((diff % 60000) / 1000);
-      setTimeLeft(`${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`);
-    };
-    tick();
-    const timer = setInterval(tick, 1000);
-    return () => clearInterval(timer);
-  }, [follow.codeExpiresAt]);
-
   return (
-    <div className="p-4 border border-blue-200 dark:border-blue-500/30 rounded-xl bg-blue-50/50 dark:bg-blue-500/5 mt-4 relative overflow-hidden">
-      <div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">
-        Reflecting
+    <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 mt-4">
+      <div className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-4">
+        {follow.title || "Lancotech Trading"}
       </div>
-      <div className="flex items-center gap-2 mb-3">
-        <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-          isCall ? "text-green-600 bg-green-50" : "text-red-600 bg-red-50"
-        }`}>
-          {follow.direction}
-        </span>
-        <span className="text-sm font-semibold text-gray-800 dark:text-white">
-          {follow.symbol?.replace("/", "") || "BTCUSDT"}
-        </span>
-      </div>
-      <div className="flex justify-between items-center mb-3">
-        <span className="text-xs text-gray-400 font-medium uppercase">Time left until expiry</span>
-        <span className="font-mono font-bold text-[#1860F5] bg-white dark:bg-gray-800 px-3 py-1 rounded-lg border border-blue-100 dark:border-blue-500/30 shadow-sm">
-          {timeLeft}
-        </span>
-      </div>
-      <Row label="order code" value={follow.code} />
-      <Row label="order amount" value={follow.orderAmount.toFixed(2)} />
-      <Row label="earned interest" value={follow.earnedInterest.toFixed(2)} isGreen />
-      <Row label="total asset basis" value={follow.totalAssetSnapshot.toFixed(2)} />
+      <Row label="Trading pair" value={follow.symbol?.replace("/", "") || "-"} />
+      <Row label="Purchase duration" value={follow.durationSeconds ? `${follow.durationSeconds}s` : "-"} />
+      <Row label="Release time" value={
+        follow.codeCreatedAt ? new Date(follow.codeCreatedAt).toLocaleString("en-US") : "-"
+      } />
+      <Row label="Order amount" value={follow.orderAmount.toFixed(2)} />
+      <Row label="Action" value="" />
     </div>
   );
 }

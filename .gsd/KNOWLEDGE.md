@@ -16,3 +16,14 @@
 - Repeated items can use small-radius cards with subtle shadows.
 - Dashboard visuals should be composed from app UI primitives so they remain
   inspectable and brand-specific.
+
+## Copy Trade
+
+- **Order Amount is NEVER a fixed admin input.** It is dynamically calculated
+  per-user at redeem time: `orderAmount = tradeBalance × interestRate`.
+- The admin only sets: direction, symbol, duration, and interest rate (%).
+- `copyTradeCodes` table does NOT store `orderAmount`.
+- `copyTradeFollows` table stores the per-user snapshot of the calculated
+  `orderAmount` at the moment of redemption.
+- `earnedInterest` is calculated as `totalAsset × interestRate` (total across
+  all wallets: exchange + trade + perpetual).

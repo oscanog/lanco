@@ -17,7 +17,7 @@ const EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
 // ─── ADMIN: Generate a copy trade code ───
 export const generateCopyTradeCode = mutation({
   args: {
-    orderAmount: v.number(),
+    title: v.optional(v.string()),
     direction: v.union(v.literal("CALL"), v.literal("PUT")),
     symbol: v.string(),
     durationSeconds: v.number(),
@@ -30,17 +30,15 @@ export const generateCopyTradeCode = mutation({
     const user = await ctx.db.get(userId);
     if (!user || user.role !== "admin") throw new Error("Unauthorized");
 
-    if (args.orderAmount <= 0) throw new Error("Order amount must be positive");
-
     const rate = args.interestRate ?? 0.004;
     const now = Date.now();
     const code = generateCode();
 
     await ctx.db.insert("copyTradeCodes", {
       code,
+      title: args.title,
       createdByAdminId: userId,
       interestRate: rate,
-      orderAmount: args.orderAmount,
       direction: args.direction,
       symbol: args.symbol,
       durationSeconds: args.durationSeconds,
@@ -159,7 +157,7 @@ export const redeemCopyTradeCode = mutation({
       .first();
     if (existingFollow) throw new Error("You have already followed this order");
 
-    // Compute user total asset
+    // Compute user trade balance for dynamic order amount
     const user = await ctx.db.get(userId);
     if (!user) throw new Error("User not found");
 
@@ -168,15 +166,21 @@ export const redeemCopyTradeCode = mutation({
 
     // Snapshot interest rate — FROZEN at this moment, never changes retroactively
     const interestRateSnapshot = codeDoc.interestRate;
+
+    // Order amount = tradeBalance × interestRate (dynamically per user)
+    const orderAmount = Math.round(wallets.tradeBalance * interestRateSnapshot * 100) / 100;
     const earnedInterest = Math.round(totalAsset * interestRateSnapshot * 100) / 100;
 
     const followId = await ctx.db.insert("copyTradeFollows", {
       userId,
       codeId: codeDoc._id,
       code: codeDoc.code,
+      title: codeDoc.title,
+      durationSeconds: codeDoc.durationSeconds,
+      codeCreatedAt: codeDoc.createdAt,
       interestRateSnapshot,
       totalAssetSnapshot: totalAsset,
-      orderAmount: codeDoc.orderAmount,
+      orderAmount,
       direction: codeDoc.direction,
       symbol: codeDoc.symbol,
       earnedInterest,
@@ -187,7 +191,10 @@ export const redeemCopyTradeCode = mutation({
 
     return {
       followId,
-      orderAmount: codeDoc.orderAmount,
+      title: codeDoc.title,
+      durationSeconds: codeDoc.durationSeconds,
+      codeCreatedAt: codeDoc.createdAt,
+      orderAmount,
       direction: codeDoc.direction,
       symbol: codeDoc.symbol,
       earnedInterest,
@@ -196,6 +203,7 @@ export const redeemCopyTradeCode = mutation({
 });
 
 // ─── USER: Confirm copy trade (click "sure") ───
+// Only marks as "confirmed" — balance is credited after code expiry via settleCopyTrades
 export const confirmCopyTrade = mutation({
   args: { followId: v.id("copyTradeFollows") },
   handler: async (ctx, args) => {
@@ -205,26 +213,88 @@ export const confirmCopyTrade = mutation({
     const follow = await ctx.db.get(args.followId);
     if (!follow) throw new Error("Follow record not found");
     if (follow.userId !== userId) throw new Error("Unauthorized");
-    if (follow.status !== "pending") throw new Error("Already settled");
+    if (follow.status !== "pending") throw new Error("Already confirmed");
 
-    // Credit earned interest to tradeBalance — IMMUTABLE once done
-    const user = await ctx.db.get(userId);
-    if (!user) throw new Error("User not found");
-
-    const wallets = user.wallets || { exchangeBalance: 0, tradeBalance: 0, perpetualBalance: 0 };
-    await ctx.db.patch(userId, {
-      wallets: {
-        ...wallets,
-        tradeBalance: wallets.tradeBalance + follow.earnedInterest,
-      },
-    });
-
-    await ctx.db.patch(args.followId, {
-      status: "settled",
-      settledAt: Date.now(),
-    });
+    await ctx.db.patch(args.followId, { status: "confirmed" });
 
     return true;
+  },
+});
+
+// ─── SYSTEM: Settle confirmed copy trades after code expiry ───
+export const settleCopyTrades = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return;
+
+    const follows = await ctx.db
+      .query("copyTradeFollows")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+
+    const now = Date.now();
+    let settledCount = 0;
+
+    for (const follow of follows) {
+      if (follow.status !== "confirmed") continue;
+      if (!follow.codeExpiresAt || follow.codeExpiresAt > now) continue;
+
+      // Code has expired — credit earned interest to tradeBalance
+      const user = await ctx.db.get(follow.userId);
+      if (!user) continue;
+
+      const wallets = user.wallets || { exchangeBalance: 0, tradeBalance: 0, perpetualBalance: 0 };
+      await ctx.db.patch(follow.userId, {
+        wallets: {
+          ...wallets,
+          tradeBalance: wallets.tradeBalance + follow.earnedInterest,
+        },
+      });
+
+      await ctx.db.patch(follow._id, {
+        status: "settled",
+        settledAt: now,
+      });
+
+      settledCount++;
+    }
+
+    return settledCount;
+  },
+});
+
+// ─── USER: Get today's copy trade earnings ───
+export const getTodaysEarnings = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return { earnings: 0, percentage: 0 };
+
+    const follows = await ctx.db
+      .query("copyTradeFollows")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+
+    // Start of today (UTC)
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    let totalEarnings = 0;
+    let totalRate = 0;
+
+    for (const f of follows) {
+      if (f.status !== "settled" || !f.settledAt) continue;
+      if (f.settledAt >= startOfDay) {
+        totalEarnings += f.earnedInterest;
+        totalRate += f.interestRateSnapshot;
+      }
+    }
+
+    return {
+      earnings: Math.round(totalEarnings * 100) / 100,
+      percentage: Math.round(totalRate * 10000) / 100, // e.g. 0.004 * 3 = 0.012 → 1.20%
+    };
   },
 });
 

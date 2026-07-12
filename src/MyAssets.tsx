@@ -8,6 +8,7 @@ export default function MyAssets() {
   const me = useQuery(api.users.getMe);
   // @ts-ignore
   const wallets = useQuery(api.wallets.getWallets);
+  const todaysEarnings = useQuery(api.copyTrade.getTodaysEarnings);
   
   const currencyCode = settings?.displayCurrency || "USD";
 
@@ -49,7 +50,7 @@ export default function MyAssets() {
             </div>
             
             <div className="text-sm text-white/90 flex gap-1 items-center">
-              today's earnings: <span className="font-medium">≈{SettingsLoaded(settings) ? formatValue(0) : "$0.00"} (0.00%)</span>
+              today's earnings: <span className="font-medium">≈{SettingsLoaded(settings) && todaysEarnings ? `${formatValue(todaysEarnings.earnings)} (${todaysEarnings.percentage.toFixed(2)}%)` : "$0.00"}</span>
             </div>
           </div>
 
