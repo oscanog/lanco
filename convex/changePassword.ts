@@ -20,8 +20,13 @@ export const changeLoginPassword = action({
       throw new Error("New passwords do not match.");
     }
 
-    if (args.newPassword.length < 6) {
-      throw new Error("Password must be at least 6 characters.");
+    const missing = [];
+    if (args.newPassword.length < 8) missing.push("8 characters");
+    if (!/[a-zA-Z]/.test(args.newPassword)) missing.push("one letter");
+    if (!/\d/.test(args.newPassword)) missing.push("one number");
+    
+    if (missing.length > 0) {
+      throw new Error(`Password is too weak. It must contain at least: ${missing.join(", ")}.`);
     }
 
     // Look up the user to get their email (account ID for the password provider)

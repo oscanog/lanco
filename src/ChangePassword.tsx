@@ -19,7 +19,18 @@ export default function ChangePassword() {
   const handleSubmit = async () => {
     setError("");
     if (!oldPassword.trim()) { setError("Please enter your old password."); return; }
-    if (newPassword.length < 6) { setError("New password must be at least 6 characters."); return; }
+    
+    // New validation rules
+    const missing = [];
+    if (newPassword.length < 8) missing.push("8 characters");
+    if (!/[a-zA-Z]/.test(newPassword)) missing.push("one letter");
+    if (!/\d/.test(newPassword)) missing.push("one number");
+    
+    if (missing.length > 0) {
+      setError(`Password is too weak. It must contain at least: ${missing.join(", ")}.`);
+      return;
+    }
+
     if (newPassword !== confirmPassword) { setError("New passwords do not match."); return; }
 
     setSubmitting(true);
