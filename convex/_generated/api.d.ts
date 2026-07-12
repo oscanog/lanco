@@ -11,6 +11,7 @@
 import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
 import type * as certifications from "../certifications.js";
+import type * as changePassword from "../changePassword.js";
 import type * as copyTrade from "../copyTrade.js";
 import type * as http from "../http.js";
 import type * as myFunctions from "../myFunctions.js";
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   auth: typeof auth;
   certifications: typeof certifications;
+  changePassword: typeof changePassword;
   copyTrade: typeof copyTrade;
   http: typeof http;
   myFunctions: typeof myFunctions;

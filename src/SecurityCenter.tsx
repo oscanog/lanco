@@ -13,7 +13,7 @@ export default function SecurityCenter() {
 
       <div className="p-5 flex flex-col gap-3 mt-4">
         <MenuRow icon={<Smartphone size={20} />} label="google verification" href="#" disabled />
-        <MenuRow icon={<KeyRound size={20} />} label="change password" href="#" disabled />
+        <MenuRow icon={<KeyRound size={20} />} label="change password" href="/change-password" />
         <MenuRow icon={<ShieldCheck size={20} />} label="fund password" href="/fund-password" />
       </div>
     </div>
