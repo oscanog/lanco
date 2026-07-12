@@ -12,8 +12,6 @@ function generateCode(): string {
   return code;
 }
 
-const EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
-
 // ─── ADMIN: Generate a copy trade code ───
 export const generateCopyTradeCode = mutation({
   args: {
@@ -22,6 +20,7 @@ export const generateCopyTradeCode = mutation({
     symbol: v.string(),
     durationSeconds: v.number(),
     interestRate: v.optional(v.number()), // default 0.004 (0.4%)
+    validityMinutes: v.optional(v.number()), // default 30
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -43,7 +42,7 @@ export const generateCopyTradeCode = mutation({
       symbol: args.symbol,
       durationSeconds: args.durationSeconds,
       status: "active",
-      expiresAt: now + EXPIRY_MS,
+      expiresAt: now + (args.validityMinutes ?? 30) * 60 * 1000,
       createdAt: now,
     });
 

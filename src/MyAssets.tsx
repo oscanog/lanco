@@ -1,4 +1,5 @@
-import { ArrowRight, Eye, RefreshCw, Wallet, Scan, Zap, Home, Repeat, Users, CircleDollarSign } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { ArrowRight, Eye, RefreshCw, Wallet, Scan, Zap, Home, Repeat, Users, CircleDollarSign, X, Search, Loader2 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 
@@ -25,6 +26,29 @@ export default function MyAssets() {
   const perpetualBal = wallets?.perpetualBalance ?? 0;
   const totalBalance = exchangeBal + tradeBal + perpetualBal;
 
+  const [modalOpen, setModalOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [targetCurrency, setTargetCurrency] = useState("PHP");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [rates, setRates] = useState<Record<string, number>>({});
+  const [ratesLoading, setRatesLoading] = useState(false);
+
+  useEffect(() => {
+    if (modalOpen && Object.keys(rates).length === 0) {
+      setRatesLoading(true);
+      fetch(`https://api.exchangerate-api.com/v4/latest/${currencyCode}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data && data.rates) setRates(data.rates);
+        })
+        .finally(() => setRatesLoading(false));
+    }
+  }, [modalOpen, currencyCode, rates]);
+
+  const filteredCurrencies = useMemo(() => {
+    return Object.keys(rates).filter(c => c.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [rates, searchQuery]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#A5C8FE] to-[#F5F7F8] dark:from-[#1E3A8A] dark:to-gray-950 text-[#424242] dark:text-gray-200 font-sans pb-24 transition-colors">
       
@@ -49,8 +73,14 @@ export default function MyAssets() {
               {SettingsLoaded(settings) ? formatValue(totalBalance) : "..."}
             </div>
             
-            <div className="text-sm text-white/90 flex gap-1 items-center">
-              today's earnings: <span className="font-medium">≈{SettingsLoaded(settings) && todaysEarnings ? `${formatValue(todaysEarnings.earnings)} (${todaysEarnings.percentage.toFixed(2)}%)` : "$0.00"}</span>
+            <div className="text-sm text-white/90 flex gap-1 items-center relative z-10">
+              today's earnings: 
+              <button 
+                onClick={() => setModalOpen(true)}
+                className="font-medium text-[#4ADE80] hover:underline cursor-pointer"
+              >
+                ≈{SettingsLoaded(settings) && todaysEarnings ? `${formatValue(todaysEarnings.earnings)} (${todaysEarnings.percentage.toFixed(2)}%)` : "$0.00"}
+              </button>
             </div>
           </div>
 
@@ -86,6 +116,108 @@ export default function MyAssets() {
         )}
         <NavItem href="/my-assets" icon={Wallet} label="my assets" active />
       </nav>
+      {/* Currency Conversion Modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => { setModalOpen(false); setDropdownOpen(false); }}>
+          <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-sm flex flex-col shadow-2xl overflow-visible" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-gray-800">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Realtime Conversion</h3>
+              <button onClick={() => { setModalOpen(false); setDropdownOpen(false); }} className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-5 pb-6 space-y-5">
+              
+              {/* Dropdown Toggle */}
+              <div className="relative">
+                <label className="text-xs font-medium text-gray-500 mb-1.5 block">Select Target Currency</label>
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 flex items-center justify-between transition focus:border-[#1860F5] outline-none text-left"
+                >
+                  <span className="font-medium text-gray-900 dark:text-white">{targetCurrency}</span>
+                  <Zap size={16} className={`text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Dropdown List */}
+                {dropdownOpen && (
+                  <div className="absolute top-[110%] left-0 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl z-10 max-h-[250px] flex flex-col overflow-hidden">
+                    <div className="p-2 border-b border-gray-100 dark:border-gray-700 relative">
+                      <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input 
+                        type="text" 
+                        placeholder="Search..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="w-full bg-transparent text-sm pl-8 pr-2 py-1.5 outline-none font-medium dark:text-white"
+                      />
+                    </div>
+                    <div className="overflow-y-auto p-1 flex-1">
+                      {filteredCurrencies.map(c => (
+                        <button
+                          key={c}
+                          onClick={() => { setTargetCurrency(c); setDropdownOpen(false); setSearchQuery(""); }}
+                          className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition ${
+                            targetCurrency === c 
+                              ? "bg-[#1860F5]/10 text-[#1860F5] font-bold" 
+                              : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium"
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                      {filteredCurrencies.length === 0 && !ratesLoading && (
+                        <div className="text-center text-xs text-gray-400 py-3">No currencies found.</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Two Column Display */}
+              <div className="flex bg-blue-50 dark:bg-blue-500/10 rounded-2xl overflow-hidden shadow-inner">
+                
+                {/* Original */}
+                <div className="flex-1 p-4 border-r border-[#1860F5]/10 text-center flex flex-col justify-center">
+                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-0.5">Original</div>
+                  <div className="text-[10px] font-bold text-gray-400 mb-1">{currencyCode}</div>
+                  <div className="text-lg font-bold text-gray-900 dark:text-white break-all">
+                    {todaysEarnings ? formatValue(todaysEarnings.earnings) : "$0.00"}
+                  </div>
+                </div>
+
+                {/* Arrow Icon center */}
+                <div className="w-10 bg-white/50 dark:bg-gray-900/50 flex flex-col justify-center items-center backdrop-blur-sm border-x border-[#1860F5]/10 relative">
+                  <ArrowRight size={18} className="text-[#1860F5]" />
+                </div>
+
+                {/* Converted */}
+                <div className="flex-1 p-4 text-center flex flex-col justify-center bg-[#1860F5]/5 dark:bg-[#1860F5]/20">
+                   <div className="text-xs text-[#1860F5] uppercase tracking-wider mb-0.5 font-bold">Converted</div>
+                   <div className="text-[10px] font-bold text-[#1860F5]/70 mb-1">{targetCurrency}</div>
+                   <div className="text-lg font-bold text-[#1860F5] break-all">
+                    {ratesLoading ? (
+                      <Loader2 size={20} className="animate-spin mx-auto opacity-50" />
+                    ) : rates[targetCurrency] && todaysEarnings ? (
+                      new Intl.NumberFormat('en-US', { style: 'currency', currency: targetCurrency }).format(todaysEarnings.earnings * rates[targetCurrency])
+                    ) : (
+                      "..."
+                    )}
+                   </div>
+                </div>
+
+              </div>
+
+              {/* Rate hint */}
+              <div className="text-center text-[11px] text-gray-400 font-medium uppercase tracking-widest mt-2">
+                1 {currencyCode} = {rates[targetCurrency] ? rates[targetCurrency].toFixed(4) : "..."} {targetCurrency}
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

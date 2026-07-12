@@ -13,6 +13,7 @@ export default function AdminCopyTrade() {
   const [symbol] = useState("BTCUSDT");
   const [direction, setDirection] = useState<"CALL" | "PUT">("CALL");
   const [duration, setDuration] = useState(60);
+  const [validity, setValidity] = useState(30);
   const [interestRate, setInterestRate] = useState("0.4");
   const [generatedCode, setGeneratedCode] = useState("");
   const [copied, setCopied] = useState(false);
@@ -35,6 +36,7 @@ export default function AdminCopyTrade() {
         symbol,
         durationSeconds: duration,
         interestRate: (parseFloat(interestRate) || 0.4) / 100,
+        validityMinutes: validity,
       });
       setGeneratedCode(code);
     } catch (e: any) {
@@ -113,16 +115,40 @@ export default function AdminCopyTrade() {
           </div>
 
           {/* Duration */}
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Duration</label>
-          <select
-            value={duration}
-            onChange={(e) => setDuration(Number(e.target.value))}
-            className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-sm mb-3"
-          >
-            <option value={60}>60s</option>
-            <option value={120}>120s</option>
-            <option value={300}>300s</option>
-          </select>
+          <div className="flex gap-4 mb-3">
+            <div className="flex-1">
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Trade Duration</label>
+              <select
+                value={duration}
+                onChange={(e) => setDuration(Number(e.target.value))}
+                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-sm"
+              >
+                <option value={60}>60s</option>
+                <option value={120}>120s</option>
+                <option value={300}>300s</option>
+              </select>
+            </div>
+            
+            <div className="flex-1">
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Code Validity (mins)</label>
+              <input
+                type="number"
+                min="1"
+                max="60"
+                value={validity}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value);
+                  if (v >= 1 && v <= 60) setValidity(v);
+                  else if (!e.target.value) setValidity("" as any);
+                }}
+                onBlur={() => {
+                  if (!validity || validity < 1) setValidity(1);
+                  else if (validity > 60) setValidity(60);
+                }}
+                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-sm outline-none focus:border-[#1860F5]"
+              />
+            </div>
+          </div>
 
           {/* Interest rate */}
           <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Interest Rate (%)</label>
@@ -149,7 +175,7 @@ export default function AdminCopyTrade() {
                 <span className="text-xs font-medium text-green-600">Generated Code</span>
                 <div className="flex items-center gap-1 text-xs text-amber-500">
                   <Clock size={12} />
-                  <span>Expires in 30 minutes</span>
+                  <span>Expires in {validity} minutes</span>
                 </div>
               </div>
               <div className="flex items-center gap-3">
